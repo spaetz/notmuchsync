@@ -84,8 +84,13 @@ class Message:
             newfile = re.sub(r'^(.*:[12],)([A-Z]*)$',"\\1"+newtags,self.file)
             logging.debug("Change maildir flags on %s from %s to '%s'" % (self.file,sorted(self.tags),newtags))
             if not dryrun:
-                #TODO: error handling
-                os.rename(self.file, newfile)
+                try:
+                    os.rename(self.file, newfile)
+                except OSError, e:
+                    if e.errno == 2:
+                        logging.info("Renaming not possible, file %s not found" % (self.file))
+                    else:
+                        raise OSError(e)
 
         if (self.sync_notmuchtags is not None 
             and self.notmuchtags ^ self.sync_notmuchtags):
