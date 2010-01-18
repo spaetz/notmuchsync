@@ -66,7 +66,7 @@ class Message:
         """A message is represented by "id:blah" (if valid) or 'NULL' """
         if not self.valid or hasattr(self,"id") == True:
             return "NULL"
-        return "id:{0}".format(self.id)
+        return "id:%s" % (self.id)
 
     def sync_msg_tags(self, dryrun=False):
         """ Sync up changed maildir tags and/or notmuch tags.
@@ -81,7 +81,7 @@ class Message:
             m = re.compile("")
             newtags = "".join(sorted(self.sync_tags))
             newfile = re.sub(r'^(.*:[12],)([A-Z]*)$',"\\1"+newtags,self.file)
-            logging.debug("Change maildir flags on {0} from {1} to '{2}'".format(self.file,sorted(self.tags),newtags))
+            logging.debug("Change maildir flags on %s from %s to '%s'" % (self.file,sorted(self.tags),newtags))
             if not dryrun:
                 #TODO: error handling
                 os.rename(self.file, newfile)
@@ -93,11 +93,11 @@ class Message:
             remove = " ".join(map(lambda x:"-"+x,self.notmuchtags - self.sync_notmuchtags))
             add    = " ".join(map(lambda x:"+"+x,self.sync_notmuchtags - self.notmuchtags))
 
-            logging.debug("Sync tag {1} {2} for id:{0}".format(self.id,remove, add))
+            logging.debug("Sync tag %s %s for id:%s" % (remove, add, self.id))
             #actually modify the notmuch tag database
             if not dryrun:
                 prosses = notmuch.exec_cmd(["tag",remove, add, 
-                                  "-- id:{0}".format(self.id),])
+                                  "-- id:%s" % (self.id),])
                 (stdout, stderr) = prosses.communicate()
                 if stderr:
                     log.error(stderr)
@@ -181,7 +181,7 @@ class Notmuch:
         usually finish the prosess with something like:
         (stdout, stderr) = prosses.communicate()
         """
-        logging.debug("Execute {0}".format([Notmuch.__notmuchcmd__] + cmdoptions))
+        logging.debug("Execute %s" % ([Notmuch.__notmuchcmd__] + cmdoptions))
 
         prosses = subprocess.Popen([Notmuch.__notmuchcmd__] + cmdoptions, 
                                    stdout=subprocess.PIPE,
@@ -215,22 +215,22 @@ class Notmuch:
             for m in del_msgs:
                 success = self.unlink_file(m)
                 deleted += success
-            self.logger.info("Deleted {0} of {1} messages.".format(
-                    deleted, len_del_msgs))
+            self.logger.info("Deleted %d of %d messages." %
+                             (deleted, len_del_msgs))
         else:
-            self.logger.info("Would have deleted {0} messages.".format(
-                    len_del_msgs))
+            self.logger.info("Would have deleted %d messages." %
+                             (len_del_msgs))
         return len_del_msgs
 
     def unlink_file(self,m):
         """ returns 1 on success, or 0 otherwise.
         Does not fail if the file does not exist."""
-        logging.debug("Delete {0}".format(m.file))
+        logging.debug("Delete %s" % (m.file))
         try:
             os.unlink(m.file)
         except OSError, e:
             if e.errno == 2:
-                logging.debug("File not found for deletion.".format(m))
+                logging.info("File %s not found for deletion." % (m.file))
                 return 0
             else:
                 raise OSError(e)
@@ -256,9 +256,9 @@ class Notmuch:
         now = int(time.time())        
         if not all:
             #search for all messages dating 30 days back and forth in time
-            searchterm = "{0}..{1}".format(now-2592000,now+2592000)
+            searchterm = "%d..%d" % (now-2592000,now+2592000)
         else:
-            searchterm = "0..{1}".format(now-2592000,now+2592000)
+            searchterm = "0..%d" % (now+2592000)
         msgs = self.show(searchterm)
         tag_trans={'T':'delete'}
 
@@ -286,7 +286,7 @@ class Notmuch:
                 num_modified += 1 
                 m.sync_msg_tags(dryrun=dryrun)
 
-        logging.info("Synced {0} messages. {1} modified.".format(len(msgs), num_modified))
+        logging.info("Synced %d messages. %d modified." % (len(msgs), num_modified))
 
 if __name__ == '__main__':
     #set up the logger
