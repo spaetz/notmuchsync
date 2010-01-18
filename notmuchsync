@@ -282,10 +282,10 @@ class Notmuch:
                 modified = True
                 if frommaildir:
                     # Flip the unread notmuch tag
-                    m.sync_notmuchtags = m.notmuchtags.difference(set(['unread']))
+                    m.sync_notmuchtags = m.notmuchtags ^ set(['unread'])
                 else:
                     # Flip the SEEN maildir tag
-                    m.sync_tags = m.tags.difference(set(['S']))
+                    m.sync_tags = m.tags ^ set(['S'])
 
             #handle all other tag consistencies
             #TODO: There might be a shortcut for the common case with set intersections
