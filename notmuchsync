@@ -18,27 +18,39 @@ import subprocess, re, logging, os, sys, time
 
 class Message:
     """
-    Represents a message as returned by notmuch.
-    valid instance variables self.*:
-    -id
-    -file
-    -tags
-    -notmuchtags
-    -sync_tags
-    -sync_notmuchtags
+    Represents a message as returned by notmuch. Do note that the parsing 
+    approch is pretty hackish, but we have to wait for notmuch to return 
+    output in a nicer format.
+
+    - Valid instance variables self.*:
+      The following vars are set on the initial parsing:
+      .id (msg id, is set on the initial parsing)
+      .file (full file name including path, is set on the initial parsing)
+      .tags: a set() of MailDir flags
+      .notmuchtags: a set() of notmuch tags
+
+      If the following two variables contain a set() of tags/flags that are 
+      different from .tags .notmuchtags, a sync_msg_tags will write those 
+      changes:
+      .sync_tags: a set() of MailDir flags to be used
+      .sync_notmuchtags: a set() of notmuch tags to be used
+
+      .valid: is True if parsing found a message, False otherwise
     """
 
     msg_parts = re.compile(r'\x0cmessage\}\s*\x0cmessage\{',re.S)
     msg_meta  = re.compile(r'(\x0cmessage\{)?\s*id:(?P<id>\S+)\s+(.*)filename:(?P<file>.*(:[12],(?P<tags>[A-Z]*)))\n\x0cheader{\n([^\n]*)\((?P<notmuchtags>[\w ]*)\)\n.*\x0cheader}',re.S)
 
-    def __init__(self, message):
-       """inititialize a message from "message" which has the \x0cmessage{...\x0cmessage} stripped"""
+    def __init__(self, nm_msg):
+       """inititialize a message from "nm_msg" (output from notmuch show 
+       which has the \x0cmessage{...\x0cmessage} stripped.
+       """
+       self.valid=False
        self.tags = self.sync_tags = None
        self.notmuchtags = self.sync_notmuchtags = None
-       self.parse(message)
+       self.parse(nm_msg)
 
     def parse(self, message):
-       self.valid=False
        m = Message.msg_meta.match(message)
        if m != None:
            self.valid=True
@@ -46,17 +58,15 @@ class Message:
            self.file = m.group('file')
            self.tags = set(m.group('tags'))
            self.notmuchtags = set(m.group('notmuchtags').split())
-       else: print "no valid mail"
+       else:
+           #TODO better output here
+           logging.warning("no valid mail")
 
     def __repr__(self):
-        if not self.valid:
-            return "NULL\n"
-        ret = "id: "
-        try:
-            ret += self.id
-        except NameError:
-            ret += ""
-        return ret
+        """A message is represented by "id:blah" (if valid) or 'NULL' """
+        if not self.valid or hasattr(self,"id") == True:
+            return "NULL"
+        return "id:{0}".format(self.id)
 
     def sync_msg_tags(self, dryrun=False):
         """ Sync up changed maildir tags and/or notmuch tags.
