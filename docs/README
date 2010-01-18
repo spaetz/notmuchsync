@@ -1,0 +1,9 @@
+at end of filename, flags start with ":2,"
+ * Flag "P" (passed): the user has resent/forwarded/bounced this msg.
+ * Flag "R" (replied): the user has replied to this message.
+ * Flag "S" (seen): the user has viewed this message.
+ * Flag "T" (trashed): the user has moved this message to the trash
+ * Flag "D" (draft): the user considers this message a draft
+ * Flag "F" (flagged): user-defined flag; toggled at user discretion. 
+
+New flags may be defined later. Flags must be stored in ASCII order: e.g., "2,FRS". 

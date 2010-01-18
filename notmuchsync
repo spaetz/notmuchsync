@@ -1,0 +1,321 @@
+#!/usr/bin/env python
+"""
+    (c) 2010 Sebastian Spaeth Sebastian@SSpaeth.de
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 2.1 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+import subprocess, re, logging, os, sys, time
+
+class Message:
+    """
+    Represents a message as returned by notmuch.
+    valid instance variables self.*:
+    -id
+    -file
+    -tags
+    -notmuchtags
+    -sync_tags
+    -sync_notmuchtags
+    """
+
+    msg_parts = re.compile(r'\x0cmessage\}\s*\x0cmessage\{',re.S)
+    msg_meta  = re.compile(r'(\x0cmessage\{)?\s*id:(?P<id>\S+)\s+(.*)filename:(?P<file>.*(:[12],(?P<tags>[A-Z]*)))\n\x0cheader{\n([^\n]*)\((?P<notmuchtags>[\w ]*)\)\n.*\x0cheader}',re.S)
+
+    def __init__(self, message):
+       """inititialize a message from "message" which has the \x0cmessage{...\x0cmessage} stripped"""
+       self.tags = self.sync_tags = None
+       self.notmuchtags = self.sync_notmuchtags = None
+       self.parse(message)
+
+    def parse(self, message):
+       self.valid=False
+       m = Message.msg_meta.match(message)
+       if m != None:
+           self.valid=True
+           self.id = m.group('id')
+           self.file = m.group('file')
+           self.tags = set(m.group('tags'))
+           self.notmuchtags = set(m.group('notmuchtags').split())
+       else: print "no valid mail"
+
+    def __repr__(self):
+        if not self.valid:
+            return "NULL\n"
+        ret = "id: "
+        try:
+            ret += self.id
+        except NameError:
+            ret += ""
+        return ret
+
+    def sync_msg_tags(self, dryrun=False):
+        """ Sync up changed maildir tags and/or notmuch tags.
+        It examines self.tags|sync_tags and self.notmuchtags|sync_notmuchtags
+        sync_* contains the new set of tags to be applied
+        """
+
+        notmuch = Notmuch()
+
+        if (self.sync_tags is not None and self.tags ^ self.sync_tags):
+            #need to sync up maildir tags
+            m = re.compile("")
+            newtags = "".join(sorted(self.sync_tags))
+            newfile = re.sub(r'^(.*:[12],)([A-Z]*)$',"\\1"+newtags,self.file)
+            logging.debug("Change maildir flags on {0} from {1} to '{2}'".format(self.file,sorted(self.tags),newtags))
+            if not dryrun:
+                #TODO: error handling
+                os.rename(self.file, newfile)
+
+        if (self.sync_notmuchtags is not None 
+            and self.notmuchtags ^ self.sync_notmuchtags):
+            #need to sync up notmuch tags
+            #list of tags to delete and add e.g. ("-inbox -unread")
+            remove = " ".join(map(lambda x:"-"+x,self.notmuchtags - self.sync_notmuchtags))
+            add    = " ".join(map(lambda x:"+"+x,self.sync_notmuchtags - self.notmuchtags))
+
+            logging.debug("Sync tag {1} {2} for id:{0}".format(self.id,remove, add))
+            #actually modify the notmuch tag database
+            if not dryrun:
+                prosses = notmuch.exec_cmd(["tag",remove, add, 
+                                  "-- id:{0}".format(self.id),])
+                (stdout, stderr) = prosses.communicate()
+                if stderr:
+                    log.error(stderr)
+
+class Messages:
+    """
+    An iterator containing a bunch of mail messages.
+    instance variables self.* are:
+    valid = True if object is a valid message
+    """
+
+    msg_part = re.compile(r'\s*\x0cmessage\}\s*\x0cmessage\{',re.S)
+    msg_start = re.compile(r'\s*\x0cmessage\{')
+
+    def __init__(self, messages):
+        """ return the parsed message, or a tuple of messages, or None"""
+        self.msgs=[]
+        if (messages == None):
+            #init an empty message, ie do nothing
+            return None
+        self.parse(messages)
+
+    def parse(self, messages):
+        """ return the parsed messages, or a list of messages, or None"""
+        m = Messages.msg_part.split(messages)
+        if m == None:
+            #TODO stderr
+            print "Found no valid message"
+            self.valid = None
+            return None
+
+        #we have trimmed of \12message} already, now trim the start
+        m = map(lambda x: Messages.msg_start.sub('',x), m)
+
+        for msg in m:
+            msg = Message(msg)
+            if msg != None:
+                self.valid = True
+                self.msgs.append(msg)
+
+    def __len__(self):
+        """ Returns the number of contained messages """
+        return len(self.msgs)
+
+    def __iter__(self):
+        #Just return self
+        self._iter_pos = 0
+        return self
+
+    def next(self):
+        # return the next message
+        if (self._iter_pos == len(self.msgs)):
+            raise StopIteration     # end of iteration
+        self._iter_pos += 1
+        return self.msgs[self._iter_pos - 1]
+
+    def __repr__(self):
+        ret=""
+        return "\n".join([str(msg) for msg in self.msgs])
+
+class Notmuch:
+    """
+    python abstraction to the notmuch command line interface. 
+    It uses the logging module for logging, 
+    so you can set that up to log to files etc.
+
+    valid instance variables: self.*:
+    -logging: a logging instance, e.g. logging.DEBUG
+    """
+    __notmuchcmd__ = "notmuch"
+
+    def __init__(self, logger=None):
+        if logger:
+            self.logger = logger
+        else:
+            self.logger = logging.getLogger()
+
+    def exec_cmd(self, cmdoptions):
+        """ Execute a notmuch command and return the 'process'.
+        cmdoptions is a list of command options to notmuch. You will 
+        usually finish the prosess with something like:
+        (stdout, stderr) = prosses.communicate()
+        """
+        logging.debug("Execute {0}".format([Notmuch.__notmuchcmd__] + cmdoptions))
+
+        prosses = subprocess.Popen([Notmuch.__notmuchcmd__] + cmdoptions, 
+                                   stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE)
+        return prosses
+
+
+    def show(self, term):
+        """searches notmuch for "term" and returns Messages()"""
+        cmdoptions = ['show', term]
+        prosses = self.exec_cmd(cmdoptions)
+        (stdout, stderr) = prosses.communicate()
+        # parse notmuch return and return Message or (Message1, Message2,...)
+        #TODO check prosses.returncode
+        msgs = Messages(stdout)
+        return msgs
+
+    def search(self, term):
+        print("Not implemented yet")
+
+    def prune(self, tag="delete", dryrun=False):
+        """ Physically delete all mail files matching 'tag'. 
+        Returns the number of matched mails.
+        If dryrun == True, it will not actually delete them.
+        """
+        del_msgs = self.show("tag:"+tag)
+        len_del_msgs = len(del_msgs)
+
+        if not dryrun:
+            deleted = 0
+            for m in del_msgs:
+                success = self.unlink_file(m)
+                deleted += success
+            self.logger.info("Deleted {0} of {1} messages.".format(
+                    deleted, len_del_msgs))
+        else:
+            self.logger.info("Would have deleted {0} messages.".format(
+                    len_del_msgs))
+        return len_del_msgs
+
+    def unlink_file(self,m):
+        """ returns 1 on success, or 0 otherwise.
+        Does not fail if the file does not exist."""
+        logging.debug("Delete {0}".format(m.file))
+        try:
+            os.unlink(m.file)
+        except OSError, e:
+            if e.errno == 2:
+                logging.debug("File not found for deletion.".format(m))
+                return 0
+            else:
+                raise OSError(e)
+        return 1
+
+
+    def syncTags(self,thorough=False, frommaildir=False,dryrun=False, all=None):
+        """ sync the unread Tags. It does not really go through all mail files,
+        but compares the stored file name with the notmuch tags.
+        It will take the maildir tags as authoritative if 'frommaildir' or 
+        the notmuch tags otherwise. 
+        
+        Flags handled:
+        * "S": the user has viewed this message. Corresponds to "unread" tag
+        Not handled:
+        * Flag "P" (passed): the user has resent/forwarded/bounced this message.
+        * Flag "R" (replied): the user has replied to this message.
+        * Flag "T" (trashed): the user has moved this message to the trash.
+        * Flag "D" (draft):
+        * Flag "F" (flagged): user-defined flag; toggled at user discretion. 
+        """
+
+        now = int(time.time())        
+        if not all:
+            #search for all messages dating 30 days back and forth in time
+            searchterm = "{0}..{1}".format(now-2592000,now+2592000)
+        else:
+            searchterm = "0..{1}".format(now-2592000,now+2592000)
+        msgs = self.show(searchterm)
+        tag_trans={'T':'delete'}
+
+        # check all messages for inconsistencies
+        num_modified = 0
+        for m in msgs:
+            modified = False
+            # handle SEEN vs unread tags:
+            if not (('S' in m.tags) ^ ('unread' in m.notmuchtags)):
+                modified = True
+                if frommaildir:
+                    # Flip the unread notmuch tag
+                    m.sync_notmuchtags = m.notmuchtags.difference(set(['unread']))
+                else:
+                    # Flip the SEEN maildir tag
+                    m.sync_tags = m.tags.difference(set(['S']))
+
+            #handle all other tag consistencies
+            #TODO: There might be a shortcut for the common case with set intersections
+            #for (k,v) in tag_trans.items():
+            #    if ((k in m.tags) ^ (v in m.notmuchtags)):
+            #        if frommaildir:
+            #            pass
+            if modified:
+                num_modified += 1 
+                m.sync_msg_tags(dryrun=dryrun)
+
+        logging.info("Synced {0} messages. {1} modified.".format(len(msgs), num_modified))
+
+if __name__ == '__main__':
+    #set up the logger
+    logging.basicConfig(level=logging.INFO,format="%(asctime)s - %(levelname)s - %(message)s",datefmt="%Y%m%d %H:%M:%S")
+
+    notmuch = Notmuch()
+
+    # give help text by default
+    if len(sys.argv) == 1:
+        sys.argv.append('-h')
+
+    #TODO: proper options parsing/handling
+    for arg in sys.argv[1:]:
+        dryrun = '--dryrun' in sys.argv
+        if '-d' in sys.argv:
+            logging.getLogger().setLevel(logging.DEBUG)
+        elif '-q' in sys.argv:
+            logging.getLogger().setLevel(logging.WARN)
+
+        if arg in ['-h','--help']:
+            print ("""notmuchsync  Copyright (C) 2010 Sebastian Spaeth
+This program comes with ABSOLUTELY NO WARRANTY. It is released under the GNU GPL v2.1 (or later).
+
+Usage:
+-p --prune\tPrune deleted mails (use --dryrun for no real action)
+-s --sync\tSync from notmuch tags to maildir flags.\n\t\tBy default it will only look for mails from the last 30 days.\n\t\tUse --all to look at earlier mails.\n\t\tBeware, if timestamps are more than 30 days in the future, we won\'t handle it.
+-r --revsync\tSync tags from maildir to notmuch. See also -s.
+Options:
+-d\t\t Really verbose debug oputput.
+-q\t\t Log only errors.
+--dryrun\t Do not really modify notmuch db or mail files.""")
+        elif arg in ['-p','--prune']:
+            #prune all mails with a "delete" tag
+            notmuch.prune(dryrun=dryrun)
+        elif arg in ['-r','--revsync']:
+            #synchronize tags in maildir
+            notmuch.syncTags(frommaildir=True, dryrun=dryrun)
+        elif arg in ['-s','--sync']:
+            #synchronize Unread tags in notmuch
+            notmuch.syncTags(frommaildir=False, dryrun=dryrun)
+
+#    notmuch.show("tag:inbox 1261221681..1266405681")
