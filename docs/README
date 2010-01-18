@@ -1,9 +1,42 @@
-at end of filename, flags start with ":2,"
- * Flag "P" (passed): the user has resent/forwarded/bounced this msg.
- * Flag "R" (replied): the user has replied to this message.
+notmuchsync
+===========
+notmuchsync synchronizes your notmuch tag data base with your maildir flags
+(or the other way around). It works for my smallish maildir with around 8k messages, but it might well fail with a big mailstore, as it currently caches all the output with complete mails in RAM for all message finds.
+
+Copyright (C) 2010 Sebastian Spaeth
+This program comes with ABSOLUTELY NO WARRANTY. It is released under the GNU GPL v2.1 (or later).
+
+
+Usage
+=====
+-p --prune	Prune deleted mails (use --dryrun for no real action)
+-s --sync	Sync from notmuch tags to maildir flags.
+		By default it will only look for mails from the last 30 days.
+		Use --all to look at earlier mails.
+		Beware, if timestamps are more than 30 days in the future, we won't handle it.
+-r --revsync	Sync tags from maildir to notmuch. See also -s.
+Options:
+-d		 Really verbose debug oputput.
+-q		 Log only errors.
+--dryrun	 Do not really modify notmuch db or mail files.
+
+
+Maildir flags
+=============
+At end of filename, flags start with ":2,". New flags may be defined later. Flags must be stored in ASCII order.
+ 
+This one is handled by notmuchsync:
  * Flag "S" (seen): the user has viewed this message.
+
+These should be handled:
  * Flag "T" (trashed): the user has moved this message to the trash
  * Flag "D" (draft): the user considers this message a draft
  * Flag "F" (flagged): user-defined flag; toggled at user discretion. 
 
-New flags may be defined later. Flags must be stored in ASCII order: e.g., "2,FRS". 
+I don't know how to support these:
+ * Flag "P" (passed): the user has resent/forwarded/bounced this msg.
+ * Flag "R" (replied): the user has replied to this message.
+
+
+
+
