@@ -16,7 +16,9 @@
 """
 import subprocess, re, logging, os, sys, time
 
+#---------------------------------------------------------------------------
 class Message:
+#---------------------------------------------------------------------------
     """
     Represents a message as returned by notmuch. Do note that the parsing 
     approch is pretty hackish, but we have to wait for notmuch to return 
@@ -77,8 +79,7 @@ class Message:
         notmuch = Notmuch()
 
         if (self.sync_tags is not None and self.tags ^ self.sync_tags):
-            #need to sync up maildir tags
-            m = re.compile("")
+            #sync_tags differs from tags. Need to sync up maildir tags
             newtags = "".join(sorted(self.sync_tags))
             newfile = re.sub(r'^(.*:[12],)([A-Z]*)$',"\\1"+newtags,self.file)
             logging.debug("Change maildir flags on %s from %s to '%s'" % (self.file,sorted(self.tags),newtags))
@@ -88,54 +89,58 @@ class Message:
 
         if (self.sync_notmuchtags is not None 
             and self.notmuchtags ^ self.sync_notmuchtags):
-            #need to sync up notmuch tags
+            #sync_notmuchtags differs. Need to sync notmuch tags
             #list of tags to delete and add e.g. ("-inbox -unread")
             remove = " ".join(map(lambda x:"-"+x,self.notmuchtags - self.sync_notmuchtags))
             add    = " ".join(map(lambda x:"+"+x,self.sync_notmuchtags - self.notmuchtags))
 
             logging.debug("Sync tag %s %s for id:%s" % (remove, add, self.id))
-            #actually modify the notmuch tag database
+
             if not dryrun:
+                #actually modify the notmuch tag database
                 prosses = notmuch.exec_cmd(["tag",remove, add, 
                                   "-- id:%s" % (self.id),])
                 (stdout, stderr) = prosses.communicate()
                 if stderr:
                     log.error(stderr)
 
+#---------------------------------------------------------------------------
 class Messages:
+#---------------------------------------------------------------------------
     """
     An iterator containing a bunch of mail messages.
-    instance variables self.* are:
-    valid = True if object is a valid message
     """
 
     msg_part = re.compile(r'\s*\x0cmessage\}\s*\x0cmessage\{',re.S)
     msg_start = re.compile(r'\s*\x0cmessage\{')
 
-    def __init__(self, messages):
-        """ return the parsed message, or a tuple of messages, or None"""
+    def __init__(self, nm_messages):
+        """ Initialize Message with nm_messages (output from notmuch show) """
         self.msgs=[]
-        if (messages == None):
-            #init an empty message, ie do nothing
-            return None
-        self.parse(messages)
+        if (nm_messages == None):
+            #init an empty Messages
+            return
+        self.parse(nm_messages)
 
-    def parse(self, messages):
-        """ return the parsed messages, or a list of messages, or None"""
-        m = Messages.msg_part.split(messages)
+    def parse(self, nm_messages):
+        """ parses nm_messages (output from notmuch show) and adds those
+        Message()s to a self.msgs list.
+        Returns None if no message was found. True otherwise
+        """
+        #split into one item per message
+        m = Messages.msg_part.split(nm_messages)
         if m == None:
-            #TODO stderr
-            print "Found no valid message"
-            self.valid = None
+            #TODO:
+            logging.warning("Found no valid messages")
             return None
 
-        #we have trimmed of \12message} already, now trim the start
+        #we have trimmed of '\12message}' already, now trim the start
         m = map(lambda x: Messages.msg_start.sub('',x), m)
 
+        #parse each single message and append it
         for msg in m:
             msg = Message(msg)
-            if msg != None:
-                self.valid = True
+            if msg.valid:
                 self.msgs.append(msg)
 
     def __len__(self):
@@ -148,17 +153,18 @@ class Messages:
         return self
 
     def next(self):
-        # return the next message
+        """ returns the next message when iterating """
         if (self._iter_pos == len(self.msgs)):
             raise StopIteration     # end of iteration
         self._iter_pos += 1
         return self.msgs[self._iter_pos - 1]
 
     def __repr__(self):
-        ret=""
         return "\n".join([str(msg) for msg in self.msgs])
 
+#---------------------------------------------------------------------------
 class Notmuch:
+#---------------------------------------------------------------------------
     """
     python abstraction to the notmuch command line interface. 
     It uses the logging module for logging, 
@@ -288,6 +294,8 @@ class Notmuch:
 
         logging.info("Synced %d messages. %d modified." % (len(msgs), num_modified))
 
+
+#---------------------------------------------------------------------------
 if __name__ == '__main__':
     #set up the logger
     logging.basicConfig(level=logging.INFO,format="%(asctime)s - %(levelname)s - %(message)s",datefmt="%Y%m%d %H:%M:%S")
