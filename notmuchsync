@@ -248,7 +248,7 @@ class Notmuch:
         return 1
 
 
-    def syncTags(self,thorough=False, frommaildir=False,dryrun=False, all=None):
+    def syncTags(self,thorough=False, frommaildir=False,dryrun=False, all_mails=None):
         """ sync the unread Tags. It does not really go through all mail files,
         but compares the stored file name with the notmuch tags.
         It will take the maildir tags as authoritative if 'frommaildir' or 
@@ -265,7 +265,7 @@ class Notmuch:
         """
 
         now = int(time.time())        
-        if not all:
+        if not all_mails:
             #search for all messages dating 30 days back and forth in time
             searchterm = "%d..%d" % (now-2592000,now+2592000)
         else:
@@ -301,44 +301,50 @@ class Notmuch:
 
 
 #---------------------------------------------------------------------------
+# MAIN
+#---------------------------------------------------------------------------
 if __name__ == '__main__':
     #set up the logger
-    logging.basicConfig(level=logging.INFO,format="%(asctime)s - %(levelname)s - %(message)s",datefmt="%Y%m%d %H:%M:%S")
+    logging.basicConfig(level=logging.INFO,
+                        format="%(asctime)s - %(levelname)s - %(message)s",
+                        datefmt="%Y%m%d %H:%M:%S")
 
     notmuch = Notmuch()
 
-    # give help text by default
+    # output help text by default
     if len(sys.argv) == 1:
         sys.argv.append('-h')
 
-    #TODO: proper options parsing/handling
-    for arg in sys.argv[1:]:
-        dryrun = '--dryrun' in sys.argv
-        if '-d' in sys.argv:
-            logging.getLogger().setLevel(logging.DEBUG)
-        elif '-q' in sys.argv:
-            logging.getLogger().setLevel(logging.WARN)
-
-        if arg in ['-h','--help']:
-            print ("""notmuchsync  Copyright (C) 2010 Sebastian Spaeth
+    UsageText = """notmuchsync  Copyright (C) 2010 Sebastian Spaeth
 This program comes with ABSOLUTELY NO WARRANTY. It is released under the GNU GPL v2.1 (or later).
 
 Usage:
 -p --prune\tPrune deleted mails (use --dryrun for no real action)
--s --sync\tSync from notmuch tags to maildir flags.\n\t\tBy default it will only look for mails from the last 30 days.\n\t\tUse --all to look at earlier mails.\n\t\tBeware, if timestamps are more than 30 days in the future, we won\'t handle it.
+-s --sync\tSync from notmuch tags to maildir flags.\n\t\tBy default it will only look for mails from the last 30 days.\n\t\tUse --all to look at earlier mails. (probably BUGGY as it reads all mails into RAM)\n\t\tBeware, if timestamps are more than 30 days in the future, we won\'t handle it.
 -r --revsync\tSync tags from maildir to notmuch. See also -s.
+
 Options:
 -d\t\t Really verbose debug oputput.
 -q\t\t Log only errors.
---dryrun\t Do not really modify notmuch db or mail files.""")
+--dryrun\t Do not really modify notmuch db or mail files. Works with -p -r -s commands."""
+
+    #TODO: proper options parsing/handling
+    dryrun = '--dryrun' in sys.argv
+    all_mails = '--all' in sys.argv
+    if '-d' in sys.argv:
+        logging.getLogger().setLevel(logging.DEBUG)
+    elif '-q' in sys.argv:
+        logging.getLogger().setLevel(logging.WARN)
+
+    for arg in sys.argv[1:]:
+        if arg in ['-h','--help']:
+            print (UsageText)
         elif arg in ['-p','--prune']:
             #prune all mails with a "delete" tag
             notmuch.prune(dryrun=dryrun)
         elif arg in ['-r','--revsync']:
             #synchronize tags in maildir
-            notmuch.syncTags(frommaildir=True, dryrun=dryrun)
+            notmuch.syncTags(frommaildir=True, dryrun=dryrun, all_mails=all_mails)
         elif arg in ['-s','--sync']:
             #synchronize Unread tags in notmuch
-            notmuch.syncTags(frommaildir=False, dryrun=dryrun)
-
-#    notmuch.show("tag:inbox 1261221681..1266405681")
+            notmuch.syncTags(frommaildir=False, dryrun=dryrun, all_mails=all_mails)
