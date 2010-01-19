@@ -53,7 +53,6 @@ class Message:
        self.parse(nm_msg)
 
     def parse(self, message):
-        logging.debug(message)
         m = Message.msg_meta.match(message)
         if m != None:
            self.valid=True
