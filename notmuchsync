@@ -307,15 +307,19 @@ class Notmuch:
                 modified = True
                 if frommaildir:
                     # Flip the maildir flags
-                    m.sync_notmuchtags = m.notmuchtags ^ \
-                    set ([tag_trans_inverse.get(x) for x in wrongflags])
-                    #logging.debug("Flip notm %s to %s (flags %s)" % 
-                    #              (m.notmuchtags,m.sync_notmuchtags, wrongflags))
+                    if m.sync_notmuchtags == None:
+                        m.sync_notmuchtags = set()
+                    m.sync_notmuchtags = m.sync_notmuchtags | m.notmuchtags ^ \
+                        set ([tag_trans_inverse.get(x) for x in wrongflags])
+                    #logging.debug("Flip nm %s to %s (flags %s)" % 
+                    #            (m.notmuchtags,m.sync_notmuchtags, wrongflags))
                 else:
                     # Flip the maildir flags
-                    m.sync_tags = m.tags ^ wrongflags
-                    #logging.error("Flip f %s to %s (notmuch %s)" % 
-                    #              (m.tags,m.sync_tags, m.notmuchtags))
+                    if m.sync_tags == None:
+                        m.sync_tags = set()
+                    m.sync_tags = m.sync_tags | (m.tags ^ wrongflags)
+                    #logging.debug("Flip f %s to %s %s (notmuch %s)" % 
+                    #           (m.tags,m.sync_tags, wrongflags, m.notmuchtags))
 
             if modified:
                 num_modified += 1 
