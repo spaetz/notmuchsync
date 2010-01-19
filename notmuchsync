@@ -172,9 +172,6 @@ class Notmuch:
     python abstraction to the notmuch command line interface. 
     It uses the logging module for logging, 
     so you can set that up to log to files etc.
-
-    valid instance variables: self.*:
-    -logging: a logging instance, e.g. logging.DEBUG
     """
     __notmuchcmd__ = "notmuch"
 
