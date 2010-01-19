@@ -80,7 +80,7 @@ class Message:
             #sync_tags differs from tags. Need to sync up maildir tags
             newtags = "".join(sorted(self.sync_tags))
             newfile = re.sub(r'^(.*:[12],)([A-Z]*)$',"\\1"+newtags,self.file)
-            logging.debug("Change maildir flags on %s from %s to '%s'" % (self.file,sorted(self.tags),newtags))
+            logging.debug("Change maildir flags for %s from %s to '%s'" % (self.id,sorted(self.tags),newtags))
             if not dryrun:
                 try:
                     os.rename(self.file, newfile)
