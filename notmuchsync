@@ -103,11 +103,11 @@ class Message:
 
             if not dryrun:
                 #actually modify the notmuch tag database
-                prosses = notmuch.exec_cmd(["tag",remove, add, 
+                process = notmuch.exec_cmd(["tag",remove, add, 
                                   "-- id:%s" % (self.id),])
-                (stdout, stderr) = prosses.communicate()
+                (stdout, stderr) = process.communicate()
                 if stderr:
-                    log.error(stderr)
+                    logging.error("Notmuch failed:" % (stderr))
 
 #---------------------------------------------------------------------------
 class Messages:
@@ -190,23 +190,29 @@ class Notmuch:
         """ Execute a notmuch command and return the 'process'.
         cmdoptions is a list of command options to notmuch. You will 
         usually finish the prosess with something like:
-        (stdout, stderr) = prosses.communicate()
+        (stdout, stderr) = process.communicate()
         """
         logging.debug("Execute %s" % ([Notmuch.__notmuchcmd__] + cmdoptions))
 
-        prosses = subprocess.Popen([Notmuch.__notmuchcmd__] + cmdoptions, 
+        process = subprocess.Popen([Notmuch.__notmuchcmd__] + cmdoptions, 
                                    stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE)
-        return prosses
+        return process
 
 
     def show(self, term):
-        """searches notmuch for "term" and returns Messages()"""
+        """searches notmuch for "term"
+        Returns Messages() or None on error
+        """
         cmdoptions = ['show', term]
-        prosses = self.exec_cmd(cmdoptions)
-        (stdout, stderr) = prosses.communicate()
+        process = self.exec_cmd(cmdoptions)
+        (stdout, stderr) = process.communicate()
+
+        if process.returncode != 0:
+            logging.error("Notmuch show failed: %s" %(stderr))
+            return None
+
         # parse notmuch return and return Message or (Message1, Message2,...)
-        #TODO check prosses.returncode
         msgs = Messages(stdout)
         return msgs
 
