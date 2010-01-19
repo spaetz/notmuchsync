@@ -1,13 +1,10 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
 	"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
-	<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
-
-	<title>spaetz/notmuchsync @ GitHub</title>
-	
-	<style type="text/css">
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <title>spaetz/notmuchsync @ GitHub</title>
+  <style type="text/css">
 		body {
   		margin-top: 1.0em;
   		background-color: #9e3aa6;
@@ -29,8 +26,7 @@
 		pre { background: #000; color: #fff; padding: 15px;}
     hr { border: 0; width: 80%; border-bottom: 1px solid #aaa}
     .footer { text-align:center; padding-top:30px; font-style: italic; }
-	</style>
-	
+	</style>	
 </head>
 
 <body>
@@ -49,13 +45,14 @@
       <span class="small">by <a href="http://github.com/spaetz">spaetz</a></span></h1>
 
     <div class="description">
-      Syncing to from notmuch
+      notmuch is a python command line utility that performs various syncing operations between the notmuch mail indexer and the MailDir files. It currently syncs the MailDir "S" (seen) flag, and physically prunes mail files that have been tagged as "delete". Syncing happens always 1-way, but the direction can be set via command line option (change MailDir flags <b>or</b> notmuch tags)
     </div>
 
-    <p>syncing maildir flags to/from notmuch tags and other goodies</p><h2>Dependencies</h2>
-<p>python, notmuch command line client</p>
+    <p>syncing maildir flags to/from notmuch tags and other goodies</p>
+<h2>Dependencies</h2>
+<p>python (<2.6? minimum version unknown), notmuch command line client</p>
 <h2>Authors</h2>
-<p>Sebastian Spaeth (Sebastian@SSpaeth.de)<br/><br/>      </p>
+<p>Sebastian Spaeth (Sebastian@SSpaeth.de)</p>
 <h2>Contact</h2>
 <p> (Sebastian@SSpaeth.de)<br/>      </p>
 
