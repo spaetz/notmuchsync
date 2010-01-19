@@ -94,15 +94,15 @@ class Message:
             and self.notmuchtags ^ self.sync_notmuchtags):
             #sync_notmuchtags differs. Need to sync notmuch tags
             #list of tags to delete and add e.g. ("-inbox -unread")
-            remove = " ".join(map(lambda x:"-"+x,self.notmuchtags - self.sync_notmuchtags))
-            add    = " ".join(map(lambda x:"+"+x,self.sync_notmuchtags - self.notmuchtags))
+            modtags  = " ".join(map(lambda x:"-"+x,self.notmuchtags - self.sync_notmuchtags))
+            modtags += " ".join(map(lambda x:"+"+x,self.sync_notmuchtags - self.notmuchtags))
 
-            logging.debug("Sync tag %s %s for id:%s" % (remove, add, self.id))
+            logging.debug("Sync tag %s for id:%s" % (modtags, self.id))
 
             if not dryrun:
                 #actually modify the notmuch tag database
-                process = Notmuch().exec_cmd(["tag",remove, add, 
-                                  "-- id:%s" % (self.id),])
+                process = Notmuch().exec_cmd(["tag",modtags, 
+                                  "--", "id:%s" % (self.id)])
                 (stdout, stderr) = process.communicate()
                 if stderr:
                     logging.error("Notmuch failed: %s" % (stderr))
