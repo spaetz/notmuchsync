@@ -222,6 +222,10 @@ class Notmuch:
         del_msgs = self.show("tag:"+tag)
         len_del_msgs = len(del_msgs)
 
+        if del_msgs == None:
+            logging.error("Could not prune messages due to notmuch error.")
+            return None
+
         if not dryrun:
             deleted = 0
             for m in del_msgs:
@@ -247,7 +251,6 @@ class Notmuch:
             else:
                 raise OSError(e)
         return 1
-
 
     def syncTags(self,thorough=False, frommaildir=False,dryrun=False, all_mails=None):
         """ sync the unread Tags. It does not really go through all mail files,
