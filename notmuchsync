@@ -197,15 +197,17 @@ class Notmuch:
 
     def show(self, term):
         """searches notmuch for "term"
-        Returns Messages() or None on error
+        Returns Messages() will even return sth on an xapian error,
+        as not all of them are fatal and some occur frequently...
         """
         cmdoptions = ['show', term]
         process = self.exec_cmd(cmdoptions)
         (stdout, stderr) = process.communicate()
 
         if process.returncode != 0:
-            logging.error("Notmuch show failed: %s" %(stderr))
-            return None
+            logging.warning("Notmuch show failed (xapian returns: %d). We probably not return all positive search results.\n%s" %
+                          (process.returncode, stderr))
+            #Don't abort here... not returning None
 
         # parse notmuch return and return Message or (Message1, Message2,...)
         msgs = Messages(stdout)
@@ -275,8 +277,13 @@ class Notmuch:
         else:
             searchterm = "0..%d" % (now+2592000)
         msgs = self.show(searchterm)
-        tag_trans={'T':'delete'}
 
+        if msgs == None:
+            logging.error("Could not sync messages due to notmuch error.")
+            return None
+
+        tag_trans={'delete':'T','draft':'D','flagged':'F'}
+        tag_trans_inverse = dict((tag_trans[x], x) for x in tag_trans) # a bit clumsy ?!
         # check all messages for inconsistencies
         num_modified = 0
         for m in msgs:
@@ -292,11 +299,24 @@ class Notmuch:
                     m.sync_tags = m.tags ^ set(['S'])
 
             #handle all other tag consistencies
-            #TODO: There might be a shortcut for the common case with set intersections
-            #for (k,v) in tag_trans.items():
-            #    if ((k in m.tags) ^ (v in m.notmuchtags)):
-            #        if frommaildir:
-            #            pass
+            #these MailDir flags in tag_trans are wrong
+            wrongflags = (set([tag_trans.get(x) for x in m.notmuchtags]) \
+                          ^ set(tag_trans.values()) & m.tags ) \
+                          - set([None])     # finally remove None from result
+            if wrongflags:
+                modified = True
+                if frommaildir:
+                    # Flip the maildir flags
+                    m.sync_notmuchtags = m.notmuchtags ^ \
+                    set ([tag_trans_inverse.get(x) for x in wrongflags])
+                    #logging.debug("Flip notm %s to %s (flags %s)" % 
+                    #              (m.notmuchtags,m.sync_notmuchtags, wrongflags))
+                else:
+                    # Flip the maildir flags
+                    m.sync_tags = m.tags ^ wrongflags
+                    #logging.error("Flip f %s to %s (notmuch %s)" % 
+                    #              (m.tags,m.sync_tags, m.notmuchtags))
+
             if modified:
                 num_modified += 1 
                 m.sync_msg_tags(dryrun=dryrun)
