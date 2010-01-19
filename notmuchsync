@@ -41,7 +41,7 @@ class Message:
     """
 
     msg_parts = re.compile(r'\x0cmessage\}\s*\x0cmessage\{',re.S)
-    msg_meta  = re.compile(r'(\x0cmessage\{)?\s*id:(?P<id>\S+)\s+(.*)filename:(?P<file>.*(:[12],(?P<tags>[A-Z]*)))\n\x0cheader{\n([^\n]*)\((?P<notmuchtags>[\w ]*)\)\n.*\x0cheader}',re.S)
+    msg_meta  = re.compile(r'(\x0cmessage\{)?\s*id:(?P<id>\S+)\s+(.*)filename:(?P<file>.*(:[12],(?P<tags>[A-Z]*)))\n\x0cheader{\n([^\n]*)\((?P<notmuchtags>[^\)]*)\)\n.*\x0cheader}',re.S)
 
     def __init__(self, nm_msg):
        """inititialize a message from "nm_msg" (output from notmuch show 
@@ -53,14 +53,15 @@ class Message:
        self.parse(nm_msg)
 
     def parse(self, message):
-       m = Message.msg_meta.match(message)
-       if m != None:
+        logging.debug(message)
+        m = Message.msg_meta.match(message)
+        if m != None:
            self.valid=True
            self.id = m.group('id')
            self.file = m.group('file')
            self.tags = set(m.group('tags'))
            self.notmuchtags = set(m.group('notmuchtags').split())
-       else:
+        else:
            #TODO better output here
            logging.warning("no valid mail")
 
