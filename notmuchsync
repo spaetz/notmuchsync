@@ -285,12 +285,12 @@ class Notmuch:
         
         Flags handled:
         * "S": the user has viewed this message. Corresponds to "unread" tag
+        * "T" (deleted): the user has moved this message to the trash.
+        * "D" (draft):
+        * "F" (flagged): user-defined flag; toggled at user discretion. 
         Not handled:
         * Flag "P" (passed): the user has resent/forwarded/bounced this message.
         * Flag "R" (replied): the user has replied to this message.
-        * Flag "T" (trashed): the user has moved this message to the trash.
-        * Flag "D" (draft):
-        * Flag "F" (flagged): user-defined flag; toggled at user discretion. 
         """
 
         now = int(time.time())        
@@ -371,14 +371,15 @@ This program comes with ABSOLUTELY NO WARRANTY. It is released under the GNU GPL
 
 Usage:
 -p --prune\tPrune deleted mails (use --dryrun for no real action)
--s --sync\tSync from notmuch tags to maildir flags.\n\t\tBy default it will only look for mails from the last 30 days.\n\t\tUse --all to look at earlier mails. (probably BUGGY as it reads all mails into RAM)\n\t\tBeware, if timestamps are more than 30 days in the future, we won\'t handle it.
+-s --sync\tSync from notmuch tags to maildir flags.\n\t\tBy default it will only look for mails from the last 30 days.\n\t\tUse --all to look at earlier mails. (probably nonworking for huge maildirs as it reads all mails into RAM)
+\t\tNote that if timestamps are more than 30 days in the future, we won\'t handle it.
 -r --revsync\tSync tags from maildir to notmuch. See also -s.
 
 Options:
 -d\t\tReally verbose debug oputput.
 -q\t\tLog only errors.
 -n\t\tDo not call 'notmuch new' before and after operations
---dryrun\t Do not really modify notmuch db or mail files. Works with -p -r -s commands."""
+--dryrun\tDo not really modify notmuch db or mail files. Works with -p -r -s commands."""
 
     #TODO: proper options parsing/handling
     dryrun = '--dryrun' in sys.argv
