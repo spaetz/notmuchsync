@@ -204,6 +204,20 @@ class Notmuch:
         return process
 
 
+    def new(self):
+        """ Perform a notmuch new in order to get a consistent db
+        Returns True on success or None on error
+        """
+        cmdoptions = ['new']
+        process = self.exec_cmd(cmdoptions)
+        (stdout, stderr) = process.communicate()
+
+        if process.returncode != 0:
+            logging.warning("Notmuch new failed (returns: %d): %s" %
+                          (process.returncode, stderr))
+            return None
+        return True
+
     def show(self, term):
         """searches notmuch for "term"
         Returns Messages() will even return sth on an xapian error,
@@ -361,13 +375,15 @@ Usage:
 -r --revsync\tSync tags from maildir to notmuch. See also -s.
 
 Options:
--d\t\t Really verbose debug oputput.
--q\t\t Log only errors.
+-d\t\tReally verbose debug oputput.
+-q\t\tLog only errors.
+-n\t\tDo not call 'notmuch new' before and after operations
 --dryrun\t Do not really modify notmuch db or mail files. Works with -p -r -s commands."""
 
     #TODO: proper options parsing/handling
     dryrun = '--dryrun' in sys.argv
     all_mails = '--all' in sys.argv
+    notmuchnew = '-n' not in sys.argv
     if '-d' in sys.argv:
         logging.getLogger().setLevel(logging.DEBUG)
     elif '-q' in sys.argv:
@@ -378,10 +394,18 @@ Options:
             print (UsageText)
         elif arg in ['-p','--prune']:
             #prune all mails with a "delete" tag
+            if notmuchnew: notmuch.new()
             notmuch.prune(dryrun=dryrun)
+            if notmuchnew: notmuch.new()
         elif arg in ['-r','--revsync']:
             #synchronize tags in maildir
-            notmuch.syncTags(frommaildir=True, dryrun=dryrun, all_mails=all_mails)
+            if notmuchnew: notmuch.new()
+            notmuch.syncTags(frommaildir=True, dryrun=dryrun,
+                             all_mails=all_mails)
+            if notmuchnew: notmuch.new()
         elif arg in ['-s','--sync']:
             #synchronize Unread tags in notmuch
-            notmuch.syncTags(frommaildir=False, dryrun=dryrun, all_mails=all_mails)
+            if notmuchnew: notmuch.new()
+            notmuch.syncTags(frommaildir=False, dryrun=dryrun,
+                             all_mails=all_mails)
+            if notmuchnew: notmuch.new()
