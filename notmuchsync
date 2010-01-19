@@ -105,7 +105,7 @@ class Message:
                                   "-- id:%s" % (self.id),])
                 (stdout, stderr) = process.communicate()
                 if stderr:
-                    logging.error("Notmuch failed:" % (stderr))
+                    logging.error("Notmuch failed: %s" % (stderr))
 
 #---------------------------------------------------------------------------
 class Messages:
