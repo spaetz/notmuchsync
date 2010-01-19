@@ -376,7 +376,7 @@ Usage:
 -r --revsync\tSync tags from maildir to notmuch. See also -s.
 
 Options:
--d\t\tReally verbose debug oputput.
+-d\t\tReally verbose debug output.
 -q\t\tLog only errors.
 -n\t\tDo not call 'notmuch new' before and after operations
 --dryrun\tDo not really modify notmuch db or mail files. Works with -p -r -s commands."""
