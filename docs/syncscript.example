@@ -1,0 +1,26 @@
+#!/bin/sh
+# sync imap and notmuch. If any command line parameter is given,
+# we use the quiet interface, otherwise we get fancy
+
+INTERFACE=Noninteractive.Quiet
+
+if [ -z $1 ]; then
+  INTERFACE=Curses.Blinkenlights
+fi
+
+# make notmuch db consistent (earlier removed mail files etc)
+notmuch new > /dev/null
+# sync maildir flags up with notmuch
+/home/spaetz/src/notmuchsync/notmuchsync -s -n
+
+#sync with imap server
+offlineimap -u ${INTERFACE}
+
+#we need to restore the terminal after ncurses stuff :-(
+if [ "${INTERFACE}" = "Curses.Blinkenlights" ]; then
+  reset -Q
+fi
+
+#finally reflect externally changed maildir flags in notmuch tags
+notmuch new
+/home/spaetz/src/notmuchsync/notmuchsync -n -r -d
