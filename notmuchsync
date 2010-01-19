@@ -76,8 +76,6 @@ class Message:
         sync_* contains the new set of tags to be applied
         """
 
-        notmuch = Notmuch()
-
         if (self.sync_tags is not None and self.tags ^ self.sync_tags):
             #sync_tags differs from tags. Need to sync up maildir tags
             newtags = "".join(sorted(self.sync_tags))
@@ -103,7 +101,7 @@ class Message:
 
             if not dryrun:
                 #actually modify the notmuch tag database
-                process = notmuch.exec_cmd(["tag",remove, add, 
+                process = Notmuch().exec_cmd(["tag",remove, add, 
                                   "-- id:%s" % (self.id),])
                 (stdout, stderr) = process.communicate()
                 if stderr:
