@@ -403,7 +403,6 @@ Options:
             if notmuchnew: notmuch.new()
             notmuch.syncTags(frommaildir=True, dryrun=dryrun,
                              all_mails=all_mails)
-            if notmuchnew: notmuch.new()
         elif arg in ['-s','--sync']:
             #synchronize Unread tags in notmuch
             if notmuchnew: notmuch.new()
