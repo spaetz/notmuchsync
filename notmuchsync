@@ -104,7 +104,7 @@ class Message:
             #sync_notmuchtags differs. Need to sync notmuch tags
             #list of tags to delete and add e.g. ("-inbox -unread")
             modtags  = " ".join(map(lambda x:"-"+x,self.notmuchtags - self.sync_notmuchtags))
-            modtags += " ".join(map(lambda x:"+"+x,self.sync_notmuchtags - self.notmuchtags))
+            modtags += " ".join(self.sync_notmuchtags - self.notmuchtags)
 
             logging.debug("Sync tag %s for id:%s" % (modtags, self.id))
 
