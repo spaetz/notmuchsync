@@ -239,12 +239,12 @@ class Notmuch:
     def search(self, term):
         print("Not implemented yet")
 
-    def prune(self, tag="delete", dryrun=False):
+    def prune(self, criteria="tag:delete or tag:maildir::trashed", dryrun=False):
         """ Physically delete all mail files matching 'tag'. 
         Returns the number of matched mails.
         If dryrun == True, it will not actually delete them.
         """
-        del_msgs = self.show("tag:"+tag)
+        del_msgs = self.show(criteria)
         len_del_msgs = len(del_msgs)
 
         if del_msgs == None:
