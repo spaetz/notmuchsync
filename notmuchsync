@@ -53,6 +53,9 @@ class Message:
        self.parse(nm_msg)
 
     def parse(self, message):
+        if message == "":
+            logging.debug("Message.parse() was handed an empty text.")
+            return
         m = Message.msg_meta.match(message)
         if m != None:
            self.valid=True
