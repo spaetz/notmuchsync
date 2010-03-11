@@ -8,6 +8,10 @@ Copyright (C) 2010 Sebastian Spaeth
 This program comes with ABSOLUTELY NO WARRANTY. It is released under the GNU GPL v2 (or later).
 
 
+notmuch bindinds documentation
+==============================
+There is a detailed API specification for the notmuch bindings available. You can create them with "sphinx" (available in major distributions) by runing "make html" in this docs directory.
+
 Usage
 =====
 See syncscript.example for the script that I use in order to synchronize my IMAP server with notmuch. I also run a periodic "notmuchsync -p" in order to prune old mail files.
