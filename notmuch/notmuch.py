@@ -14,7 +14,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-import subprocess, re, logging, os, sys, time, email.utils
+import subprocess, re, logging, os, time, email.utils
 import simplejson as json
 
 #---------------------------------------------------------------------------
@@ -381,12 +381,13 @@ class Notmuch:
         len_del_msgs = len(del_msgs)
 
         if del_msgs == None:
+            #TODO, catch notmuch.show exceptions
             logging.error("Could not prune messages due to notmuch error.")
             return None
 
         if not dryrun:
             deleted = 0
-            for m in del_msgs:
+            for (depth, m) in del_msgs:
                 success = m.unlink_file()
                 deleted += success
             self.logger.info("Deleted %d of %d messages." %
