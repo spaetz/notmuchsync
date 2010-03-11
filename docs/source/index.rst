@@ -1,7 +1,7 @@
 .. notmuch documentation master file, created by
    sphinx-quickstart on Tue Feb  2 10:00:47 2010.
 
-.. currentmodule:: notmuchweb.notmuch
+.. currentmodule:: notmuch.notmuch
 
 Welcome to notmuch's documentation!
 ===================================
@@ -27,7 +27,6 @@ This page contains the main API overview. More information on specific topics ca
 
 :mod:`notmuch` -- The Notmuch interface
 =============================================
-.. currentmodule:: notmuchweb.notmuch
 
 :class:`Message` -- A single email message
 ------------------------------------
