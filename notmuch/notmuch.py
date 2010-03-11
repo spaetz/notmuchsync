@@ -18,7 +18,7 @@ import subprocess, re, logging, os, sys, time, email.utils
 import simplejson as json
 
 #---------------------------------------------------------------------------
-class Message:
+class Message(object):
 #---------------------------------------------------------------------------
     """
     Represents a message as returned by notmuch.
@@ -50,24 +50,9 @@ class Message:
        """
        self.is_valid=False
        self.msg=None
-       self.maildirflags = self.sync_maildirflags = None
-       self.tags = self.sync_tags = None
+       self.maildirflags, self.sync_maildirflags = None, None
+       self._tags, self.sync_tags = None, None
        self.parse(nm_msg)
-
-    def parse(self, message):
-        if message == "":
-            logging.debug("Message.parse() was handed an empty text.")
-            return
-        #message[0][0].keys()=[u'body', u'tags', u'filename', u'headers', u'id', u'match']
-        if set((u'filename', u'id')) < set(message.keys()):
-            self.is_valid=True
-            self.msg = message
-            self.tags = message.get('tags',None)
-            flags = re.sub('^.*:[12],([A-Z]*)$','\\1',self.file)
-            self.maildirflags = set(flags)
-        else:
-            #TODO better output here
-            logging.warning("no valid mail")
 
     @property
     def file(self):
@@ -114,12 +99,27 @@ class Message:
         return self.msg.get('id', None)
 
     def get_tags(self):
-        return self.get('_tags', None)
+        return self._tags
     def set_tags(self, tags):
         self._tags = set(tags)
     tags = property(get_tags, set_tags)
-        
 
+
+    def parse(self, message):
+        if message == "":
+            logging.debug("Message.parse() was handed an empty text.")
+            return
+        #message[0][0].keys()=[u'body', u'tags', u'filename', u'headers', u'id', u'match']
+        if set((u'filename', u'id')) < set(message.keys()):
+            self.is_valid=True
+            self.msg = message
+            self.tags = message.get('tags',None)
+            flags = re.sub('^.*:[12],([A-Z]*)$','\\1',self.file)
+            self.maildirflags = set(flags)
+        else:
+            #TODO better output here
+            logging.warning("no valid mail")
+        
     def __repr__(self):
         """A message is represented by "id:blah (name)" (if valid) or 'NULL' """
         return "id:%s (%s) %s" % (self.id, self.Subject, self.get_date('%d-%m-%y'))#self.realName)
@@ -169,6 +169,21 @@ class Message:
                 (stdout, stderr) = process.communicate()
                 if stderr:
                     logging.error("Notmuch failed: %s" % (stderr))
+
+
+    def unlink_file(self):
+        """ returns 1 on success, or 0 otherwise.
+        Does not fail if the file does not exist."""
+        logging.debug("Delete %s" % (self.file))
+        try:
+            os.unlink(self.file)
+        except OSError, e:
+            if e.errno == 2:
+                logging.info("File %s not found for deletion." % (self.file))
+                return 0
+            else:
+                raise OSError(e)
+        return 1
 
 #---------------------------------------------------------------------------
 class Thread:
@@ -349,10 +364,9 @@ class Notmuch:
         (stdout, stderr) = process.communicate()
 
         if process.returncode != 0:
-            logging.warning("Notmuch show failed (xapian returns: %d). " \
-                  + "We probably not return all positive search results.\n%s" %
-                  (process.returncode, stderr))
-            #Don't abort here... not returning None
+            logging.error("Notmuch show failed (xapian returns: %d).\n%s" \
+                  % (process.returncode, stderr))
+            raise NotmuchError(stderr)
 
         json_forest = json.loads(stdout)
         return Thread(keep_nonmatch=wholeThread).parse_forest(json_forest)
@@ -362,7 +376,7 @@ class Notmuch:
         Returns the number of matched mails.
         If dryrun == True, it will not actually delete them.
         """
-        del_msgs = self.show(criteria)
+        del_msgs = self.show(criteria, wholeThread=False)
         len_del_msgs = len(del_msgs)
 
         if del_msgs == None:
@@ -372,7 +386,7 @@ class Notmuch:
         if not dryrun:
             deleted = 0
             for m in del_msgs:
-                success = self.unlink_file(m)
+                success = m.unlink_file()
                 deleted += success
             self.logger.info("Deleted %d of %d messages." %
                              (deleted, len_del_msgs))
@@ -380,20 +394,6 @@ class Notmuch:
             self.logger.info("Would have deleted %d messages." %
                              (len_del_msgs))
         return len_del_msgs
-
-    def unlink_file(self,m):
-        """ returns 1 on success, or 0 otherwise.
-        Does not fail if the file does not exist."""
-        logging.debug("Delete %s" % (m.file))
-        try:
-            os.unlink(m.file)
-        except OSError, e:
-            if e.errno == 2:
-                logging.info("File %s not found for deletion." % (m.file))
-                return 0
-            else:
-                raise OSError(e)
-        return 1
 
     def syncTags(self,frommaildir=False,dryrun=False, all_mails=None):
         """ sync the unread Tags. It does not really go through all mail files,
@@ -423,13 +423,13 @@ class Notmuch:
             searchterm = "date:1970..2036"
         """
         now = int(time.time())        
-        if not thorough:
+        if not all_mails:
             #search for all messages dating 30 days back and forth in time
             searchterm = "%d..%d" % (now-2592000,now+2592000)
         else:
             searchterm = "0..%d" % (now+2592000)
 
-        msgs = self.show(searchterm)
+        msgs = self.show(searchterm, wholeThread=False)
 
         if msgs == None:
             logging.error("Could not sync messages due to notmuch error.")
@@ -439,7 +439,7 @@ class Notmuch:
         tag_trans_inverse = dict((tag_trans[x], x) for x in tag_trans) # a bit clumsy ?!
         # check all messages for inconsistencies
         num_modified = 0
-        for m in msgs:
+        for (depth, m) in msgs:
             modified = False
             # handle SEEN vs unread tags:
             if not (('S' in m.maildirflags) ^ ('unread' in m.tags)):
@@ -468,7 +468,7 @@ class Notmuch:
                     #            (m.tags,m.sync_tags, wrongflags))
                 else:
                     # Flip the maildir flags
-                    if m.sync_maildisrflags == None:
+                    if m.sync_maildirflags == None:
                         m.sync_maildirflags = set()
                     m.sync_maildirflags = m.sync_maildirflags | (m.maildirflags ^ wrongflags)
                     #logging.debug("Flip f %s to %s %s (notmuch %s)" % 
