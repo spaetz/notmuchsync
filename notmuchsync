@@ -280,7 +280,7 @@ class Notmuch:
                 raise OSError(e)
         return 1
 
-    def syncTags(self,thorough=False, frommaildir=False,dryrun=False, all_mails=None):
+    def syncTags(self,frommaildir=False,dryrun=False, all_mails=None):
         """ sync the unread Tags. It does not really go through all mail files,
         but compares the stored file name with the notmuch tags.
         It will take the maildir tags as authoritative if 'frommaildir' or 
