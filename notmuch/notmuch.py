@@ -49,6 +49,7 @@ class Message(object):
           :param nm_msg: a message as output from notmuch show in json format
        """
        self.is_valid=False
+       self._date=None
        self.msg=None
        self.maildirflags, self.sync_maildirflags = None, None
        self._tags, self.sync_tags = None, None
@@ -86,9 +87,9 @@ class Message(object):
         return self.msg.get('body', None)
 
     def get_date(self, format):
-        if self.date is None:
-            self.date = email.utils.parsedate(self.Date)
-        return time.strftime(format, self.date)
+        if self._date is None:
+            self._date = email.utils.parsedate(self.Date)
+        return time.strftime(format, self._date)
 
     @property
     def Date(self):
