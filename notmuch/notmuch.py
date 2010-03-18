@@ -215,7 +215,7 @@ class Thread:
         returns: self
         """
         if len(json_threads) == 0:
-            logging.warning("Found no valid messages")
+            logging.debug("Received no messages")
         
         for thread in json_threads:
             t = Thread(thread,keep_nonmatch=self.keep_nonmatch,
