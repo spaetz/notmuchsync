@@ -44,13 +44,11 @@ Usage:
 Options:
 -d\t\tReally verbose debug output.
 -q\t\tLog only errors.
--n\t\tDo not call 'notmuch new' before and after operations
---dryrun\tDo not really modify notmuch db or mail files. Works with -p -r -s commands."""
+--dry-run\tDo not really modify notmuch db or mail files. Works with -p -r -s commands."""
 
     #TODO: proper options parsing/handling
-    dryrun = '--dryrun' in sys.argv
+    dryrun = '--dry-run' in sys.argv
     all_mails = '--all' in sys.argv
-    notmuchnew = '-n' not in sys.argv
     if '-d' in sys.argv:
         logging.getLogger().setLevel(logging.DEBUG)
     elif '-q' in sys.argv:
@@ -61,17 +59,12 @@ Options:
             print (UsageText)
         elif arg in ['-p','--prune']:
             #prune all mails with a "delete" tag
-            if notmuchnew: notmuch.new()
             notmuch.prune(dryrun=dryrun)
-            if notmuchnew: notmuch.new()
         elif arg in ['-r','--revsync']:
             #synchronize tags in maildir
-            if notmuchnew: notmuch.new()
             notmuch.syncTags(frommaildir=True, dryrun=dryrun,
                              all_mails=all_mails)
         elif arg in ['-s','--sync']:
             #synchronize Unread tags in notmuch
-            if notmuchnew: notmuch.new()
             notmuch.syncTags(frommaildir=False, dryrun=dryrun,
                              all_mails=all_mails)
-            if notmuchnew: notmuch.new()

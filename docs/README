@@ -7,6 +7,11 @@ The homepage is at http://spaetz.github.com/notmuchsync/ which contains links to
 Copyright (C) 2010 Sebastian Spaeth
 This program comes with ABSOLUTELY NO WARRANTY. It is released under the GNU GPL v2 (or later).
 
+System Requirements
+===================
+A notmuch shared library (notmuch.so),
+the python bindings cnotmuch (http://pypi.python.org/pypi/cnotmuch),
+and Python >=2.5.
 
 notmuch bindinds documentation
 ==============================
