@@ -209,7 +209,7 @@ class Notmuch:
         if frommaildir and not dryrun:
             db = Database(mode=Database.MODE.READ_WRITE)
         else:
-            db = self._db
+            db = self.db_ro
 
         #fetch all messages
         msgs = Query(db,searchterm).search_messages()
