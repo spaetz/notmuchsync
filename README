@@ -1,1 +1,81 @@
-docs/README
+notmuchsync
+===========
+
+notmuchsync synchronizes your notmuch tag data base with your maildir
+flags (or the other way around).
+
+The source code is hosted is at http://github.com/spaetz/notmuchsync/.
+
+Copyright (C) 2010 Sebastian Spaeth 
+This program comes with ABSOLUTELY NO WARRANTY. It is released under
+the GNU GPL v2 (or later).
+
+Overview & Motivation
+---------------------
+
+It syncs (-s) your notmuch tags back to maildir tags, so that an email
+you read with notmuch will appear as read on other clients (such as
+your iphone or your webmail).
+
+You can also "reverse sync" (-r) your maildir flags into the notmuch
+database (e.g. on initial import you seldomly want all your emails
+being tagged as unread). However doing this using notmuchsync is
+likely to be somewhat slower than integrating patches into notmuch
+that achieve the same on a "notmuch new".
+
+notmuchsync can also purge (-p) your emails that you have tagged as
+"delete" or "Maildir::trashed", ie, it will physically delete the mail
+files.
+
+System Requirements
+-------------------
+
+* a notmuch shared library (libnotmuch.so.*),
+* the python bindings cnotmuch (http://pypi.python.org/pypi/cnotmuch),
+* Python >=2.5.
+
+notmuch bindinds documentation
+==============================
+There is a detailed API specification for the notmuch bindings available. You can create them with "sphinx" (available in major distributions) by runing "make html" in this docs directory.
+
+Usage
+=====
+
+See syncscript.example for the script that I use in order to
+synchronize my IMAP server with notmuch. (Do note that you should
+probably figure out whether running "notmuch new" before
+notmuchsyncing is appropriate and add that to your scripts).
+
+I also run a periodic "notmuchsync -p" in order to prune old mail
+files.
+
+Usage:
+-p --prune	Prune deleted mails (use --dryrun for no real action)
+-s --sync	Sync from notmuch tags to maildir flags.
+		By default it will only look for mails from the last 30 days.
+		use --all to look at earlier mails.
+		Note that if timestamps are more than 30 days in the future,
+                we won't handle it.
+-r --revsync	Sync tags from maildir to notmuch. See also -s.
+
+Options:
+-d		Really verbose debug output.
+-q		Log only errors.
+--all		(Rev-)Sync all mails and not only those from the last 30 days.
+--dry-run	Do not really modify notmuch db or mail files. 
+		Works with -p -r -s commands.
+
+Maildir flags
+=============
+At end of filename, flags start with ":2,". New flags may be defined later.
+Flags must be stored in ASCII order.
+ 
+This one is handled by notmuchsync:
+ * "S" (seen): the user has viewed this message.
+ * "T" (delete): the user has moved this message to the trash
+ * "D" (draft): the user considers this message a draft
+ * "F" (flagged): user-defined flag; toggled at user discretion. 
+
+I don't know how to support these:
+ * Flag "P" (passed): the user has resent/forwarded/bounced this msg.
+ * Flag "R" (replied): the user has replied to this message.
