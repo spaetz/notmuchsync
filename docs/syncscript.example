@@ -2,6 +2,9 @@
 # sync imap and notmuch. If any command line parameter is given,
 # we use the quiet interface, otherwise we get fancy
 
+#Another possibility is to add the notmuchsync commands to presync and postsync
+#hooks into your .offlineimaprc file.
+
 INTERFACE=Noninteractive.Quiet
 
 if [ -z $1 ]; then
@@ -11,7 +14,7 @@ fi
 # make notmuch db consistent (earlier removed mail files etc)
 notmuch new > /dev/null
 # sync maildir flags up with notmuch
-/home/spaetz/src/notmuchsync/notmuchsync -s -n
+/home/spaetz/src/notmuchsync/notmuchsync -s --all
 
 #sync with imap server
 offlineimap -u ${INTERFACE}
@@ -22,5 +25,6 @@ if [ "${INTERFACE}" = "Curses.Blinkenlights" ]; then
 fi
 
 #finally reflect externally changed maildir flags in notmuch tags
-notmuch new
-/home/spaetz/src/notmuchsync/notmuchsync -n -r -d
+# NOTE:I don't need that anymore as I patched notmuch to do that automatically
+#notmuch new
+#/home/spaetz/src/notmuchsync/notmuchsync -r -d

@@ -1,8 +1,8 @@
 notmuchsync
 ===========
 
-notmuchsync synchronizes your notmuch tag data base with your maildir
-flags (or the other way around).
+notmuchsync synchronizes your notmuch tags with your maildir flags 
+(or the other way around).
 
 The source code is hosted is at http://github.com/spaetz/notmuchsync/.
 
@@ -34,20 +34,13 @@ System Requirements
 * the python bindings cnotmuch (http://pypi.python.org/pypi/cnotmuch),
 * Python >=2.5.
 
-notmuch bindinds documentation
-==============================
-There is a detailed API specification for the notmuch bindings available. You can create them with "sphinx" (available in major distributions) by runing "make html" in this docs directory.
 
 Usage
-=====
+-----
 
 See syncscript.example for the script that I use in order to
-synchronize my IMAP server with notmuch. (Do note that you should
-probably figure out whether running "notmuch new" before
-notmuchsyncing is appropriate and add that to your scripts).
-
-I also run a periodic "notmuchsync -p" in order to prune old mail
-files.
+synchronize my IMAP server with notmuch. I also run a periodic
+"notmuchsync -p" in order to prune old mail files.
 
 Usage:
 -p --prune	Prune deleted mails (use --dryrun for no real action)
@@ -56,7 +49,8 @@ Usage:
 		use --all to look at earlier mails.
 		Note that if timestamps are more than 30 days in the future,
                 we won't handle it.
--r --revsync	Sync tags from maildir to notmuch. See also -s.
+-r --revsync	Sync tags from maildir to notmuch. See also -s. Do patch
+   		notmuch to do that automatically, if possible. It is faster.
 
 Options:
 -d		Really verbose debug output.
@@ -65,8 +59,9 @@ Options:
 --dry-run	Do not really modify notmuch db or mail files. 
 		Works with -p -r -s commands.
 
+
 Maildir flags
-=============
+-------------
 At end of filename, flags start with ":2,". New flags may be defined later.
 Flags must be stored in ASCII order.
  
