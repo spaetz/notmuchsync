@@ -49,21 +49,31 @@ notmuchsyncing is appropriate and add that to your scripts).
 I also run a periodic "notmuchsync -p" in order to prune old mail
 files.
 
-Usage:
--p --prune	Prune deleted mails (use --dryrun for no real action)
--s --sync	Sync from notmuch tags to maildir flags.
-		By default it will only look for mails from the last 30 days.
-		use --all to look at earlier mails.
-		Note that if timestamps are more than 30 days in the future,
-                we won't handle it.
--r --revsync	Sync tags from maildir to notmuch. See also -s.
-
+Usage: notmuchsync [options]
 Options:
--d		Really verbose debug output.
--q		Log only errors.
---all		(Rev-)Sync all mails and not only those from the last 30 days.
---dry-run	Do not really modify notmuch db or mail files. 
-		Works with -p -r -s commands.
+  --version         show program's version number and exit
+  -h, --help        show this help message and exit
+  -p, --prune       prune deleted mails (use --dryrun for no real action
+  --dryrun          do not really modify notmuch db or mail files.
+                    Works with -p -r -s commands.
+  -d, --debug       really verbose debug output
+  -v, --log-errors  log only errors
+  -q, --quiet       just a normal output
+
+By default it will only look for mails from the last 30 days.
+Use --all to look at earlier mails too.
+
+Note that if timestamps are more than 30 days in the future,
+we won't handle it:
+    -a, --all       examine all mails for -r and -s rather than only the
+                    last 30 days.
+    -s, --sync      sync from notmuch tags to maildir flags.
+    -r, --revsync   sync tags from maildir to notmuch. Doing this via notmuch
+                    sync is slower than integrating the patches into notmuch
+                    which achieve the same. See e.g. http://github.com/spaetz
+                    /notmuch-all-
+                    feature/commit/cefea1f29aa6ec5789fc3b3ac4a37ba79ed9c37f
+                    for one option to do that.
 
 Maildir flags
 =============

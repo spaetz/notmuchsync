@@ -14,18 +14,25 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-import logging, re, sys, os, time
+import sys
+import os
 
-#import cnotmuch
+import optparse
+import logging
+import time
+import re
+
 try:
     from cnotmuch.notmuch import Database, Query, Messages, Message
 except OSError, e:
-    sys.stderr.write("Could not import the notmuch shared library. You need to make sure it is installed correctly.\n%s\n"  % e.args)
+    sys.stderr.write("""Could not import the notmuch shared library.
+You need to make sure it is installed correctly.\n%s\n"""  % e.args)
     sys.exit(1)
 except ImportError, e:
-    sys.stderr.write("Could not import the cnotmuch bindings module. You need to make sure it is installed correctly.\nSee http://pypi.packages.org/pypi/cnotmuch for information about cnotmuch.\n")
+    sys.stderr.write("""Could not import the cnotmuch bindings module.
+You need to make sure it is installed correctly.
+See http://pypi.packages.org/pypi/cnotmuch for information about cnotmuch.\n""")
     sys.exit(1)
-
 
 #---------------------------------------------------------------------------
 class SyncMessage(Message):
@@ -60,7 +67,7 @@ class SyncMessage(Message):
        #Init this SyncMessage instance with the pointer to the notmuch_message_t
        super(SyncMessage, self).__init__(msg._msg, msg._parent)
        self.filename = self.get_filename()
-       flags = re.sub('^.*:[12],([A-Z]*)$','\\1',self.filename)
+       flags = re.sub('^.*:[12],([A-Z]*)$','\\1', self.filename)
        self.maildirflags = set(flags)
        self.sync_maildirflags = None
        self.tags = set(self.get_tags())
@@ -78,20 +85,21 @@ class SyncMessage(Message):
         sync_* contains the new set of tags to be applied
         """
 
-        if (self.sync_maildirflags is not None and self.maildirflags ^ self.sync_maildirflags):
+        if (self.sync_maildirflags is not None and
+                self.maildirflags ^ self.sync_maildirflags):
             #sync_tags differs from tags. Need to sync up maildir tags
             newtags = "".join(sorted(self.sync_maildirflags))
-            newfile = re.sub(r'^(.*:[12],)([A-Z]*)$',"\\1"+newtags,self.filename)
+            newfile = re.sub(r'^(.*:[12],)([A-Z]*)$',"\\1" +
+                    newtags, self.filename)
             logging.debug("Maildir flags for %s (%s -> '%s')" %
                           (self.get_message_id(),
-                           sorted(self.maildirflags),
-                           newtags))
+                           sorted(self.maildirflags), newtags))
             #check if we need to move from 'new' to 'cur' dir
             if 'S' in self.sync_maildirflags:
                 # split BASEDIR / NEW / FILENAME into components
                 (path, filename) = os.path.split(newfile)
                 (basedir, curdir)= os.path.split(path)
-                curdir = re.sub("^new$","cur", curdir)
+                curdir = re.sub("^new$", "cur", curdir)
                 newfile = os.path.join(basedir, curdir, filename)
 
             if not dryrun:
@@ -100,16 +108,15 @@ class SyncMessage(Message):
                 except OSError, e:
                     if e.errno == 2:
                         logging.info("Renaming not possible, file %s not found"
-                                     % (self.filename))
+                                % (self.filename))
                     else:
                         raise OSError(e)
 
-        if (self.sync_tags is not None
-            and self.tags ^ self.sync_tags):
+        if (self.sync_tags is not None and self.tags ^ self.sync_tags):
             #sync_notmuchtags differs. Need to sync notmuch tags
             logging.debug("Sync tags: +%s -%s for id:%s" %
-                          (list(self.sync_tags-self.tags),
-                           list(self.tags-self.sync_tags),
+                          (list(self.sync_tags - self.tags),
+                           list(self.tags - self.sync_tags),
                            self.get_message_id()))
 
             if not dryrun:
@@ -123,14 +130,14 @@ class SyncMessage(Message):
                 #logging.error("Notmuch failed: %s" % (stderr))
 
 #---------------------------------------------------------------------------
-class Notmuch:
+class Notmuch(object):
 #---------------------------------------------------------------------------
     """
     python abstraction to the notmuch command line interface.
 
-    Notmuch represents a specific request. Calling its method will cause the actual notmuch calls.
-    It uses the logging module for logging, so you can set that up to log
-    to files etc.
+    Notmuch represents a specific request. Calling its method will cause the
+    actual notmuch calls. It uses the logging module for logging, so you can
+    set that up to log to files etc.
 
     :param logger: A logging.Logger to be used for logging
     :type logger: logging.Logger
@@ -152,7 +159,7 @@ class Notmuch:
         Returns the number of matched mails.
         If dryrun == True, it will not actually delete them.
         """
-        msgs = Query(self.db_ro,crit).search_messages()
+        msgs = Query(self.db_ro, crit).search_messages()
         to_delete = 0
 
         if msgs == None:
@@ -162,8 +169,7 @@ class Notmuch:
 
         if dryrun:
             to_delete = len(msgs)
-            self.logger.info("Would have deleted %d messages." %
-                             (to_delete))
+            self.logger.info("Would have deleted %d messages." % to_delete)
             return to_delete
 
         deleted = 0
@@ -176,11 +182,10 @@ class Notmuch:
                 #skip errors
                 pass
 
-        self.logger.info("Deleted %d of %d messages." %
-                             (deleted, to_delete))
+        self.logger.info("Deleted %d of %d messages." % (deleted, to_delete))
         return to_delete
 
-    def syncTags(self,frommaildir=False,dryrun=False, all_mails=None):
+    def syncTags(self, frommaildir=False, dryrun=False, all_mails=None):
         """ sync the unread Tags. It does not really go through all mail files,
         but compares the stored file name with the notmuch tags.
         It will take the maildir tags as authoritative if 'frommaildir' or
@@ -210,9 +215,9 @@ class Notmuch:
         now = int(time.time())
         if not all_mails:
             #search for all messages dating 30 days back and forth in time
-            searchterm = "%d..%d" % (now-2592000,now+2592000)
+            searchterm = "%d..%d" % (now - 2592000, now + 2592000)
         else:
-            searchterm = "0..%d" % (now+2592000)
+            searchterm = "0..%d" % now + 2592000
 
         #we need a rw database if we might need to modify notmuch tags
         if frommaildir and not dryrun:
@@ -221,14 +226,15 @@ class Notmuch:
             db = self.db_ro
 
         #fetch all messages
-        msgs = Query(db,searchterm).search_messages()
+        msgs = Query(db, searchterm).search_messages()
 
         if msgs == None:
             logging.error("Could not sync messages due to notmuch error.")
             return None
 
-        tag_trans={'delete':'T','draft':'D','flagged':'F'}
-        tag_trans_inverse = dict((tag_trans[x], x) for x in tag_trans) # a bit clumsy ?!
+        tag_trans={'delete': 'T', 'draft': 'D', 'flagged': 'F'}
+        # a bit clumsy ?!
+        tag_trans_inverse = dict((tag_trans[x], x) for x in tag_trans)
         # check all messages for inconsistencies
         num_modified = 0
         total_msgs   = 0
@@ -249,9 +255,9 @@ class Notmuch:
 
             #handle all other tag consistencies
             #these MailDir flags in tag_trans are wrong
-            wrongflags = (set([tag_trans.get(x) for x in m.tags]) \
-                          ^ set(tag_trans.values()) & m.maildirflags ) \
-                          - set([None])     # finally remove None from result
+            wrongflags = (set([tag_trans.get(x) for x in m.tags]) ^ \
+                    set(tag_trans.values()) & m.maildirflags ) - set([None])
+
             if wrongflags:
                 modified = True
                 if frommaildir:
@@ -259,7 +265,7 @@ class Notmuch:
                     if m.sync_tags == None:
                         m.sync_tags = set()
                     m.sync_tags = m.sync_tags | m.tags ^ \
-                        set ([tag_trans_inverse.get(x) for x in wrongflags])
+                        set([tag_trans_inverse.get(x) for x in wrongflags])
                     #logging.debug("Flip nm %s to %s (flags %s)" %
                     #            (m.tags,m.sync_tags, wrongflags))
                 else:
@@ -277,59 +283,78 @@ class Notmuch:
             #delete our temporary SyncMessage
             del(m)
 
-        logging.info("Synced %d messages. %d modified."
-                     % (total_msgs, num_modified))
+        logging.info("Synced %d messages. %d modified." %
+                (total_msgs, num_modified))
+
+def main():
+    usage = """usage: %prog [options]
+Copyright (C) 2010 Sebastian Spaeth, acoolon.
+This program comes with ABSOLUTELY NO WARRANTY.
+
+It is released under the GNU GPL v2 (or later)."""
+    version = "%prog x.x.x"
+    group_note ="""\rBy default it will only look for mails from the last 30 days.
+Use --all to look at earlier mails too.
+
+Note that if timestamps are more than 30 days in the future,
+we won't handle it"""
+
+    parser = optparse.OptionParser(usage=usage, version=version)
+    group = optparse.OptionGroup(parser, group_note)
+
+    group.add_option("-a", "--all", action="store_true", default=False,
+        help="""examine all mails for -r and -s rather than only the
+        last 30 days.""", dest="all")
+    group.add_option("-s", "--sync", action="store_true", default=False,
+            help="sync from notmuch tags to maildir flags.", dest="sync")
+    group.add_option("-r", "--revsync", action="store_true", default=False,
+            help="""sync tags from maildir to notmuch. Doing this via notmuch
+sync is slower than integrating the patches into notmuch which achieve the same.
+See e.g. http://github.com/spaetz/notmuch-all-feature/commit/cefea1f29aa6ec5789fc3b3ac4a37ba79ed9c37f
+for one option to do that.""", dest="rsync")
+
+    parser.add_option("-p", "--prune", action="store_true", default=False,
+        help="prune deleted mails (use --dryrun for no real action",
+        dest="prune")
+    parser.add_option("--dryrun", action="store_true", default=False,
+        help="""do not really modify notmuch db or mail files.
+        Works with -p -r -s commands.""", dest="dryrun")
+
+    parser.add_option("-d", "--debug", action="store_const",
+        const=logging.DEBUG, help="really verbose debug output", dest="debug")
+    parser.add_option("-v", "--log-errors", action="store_const",
+        const=logging.WARN, help="log only errors", dest="debug")
+    parser.add_option("-q", "--quiet", action="store_const", dest="debug",
+        const=logging.INFO, help="just a normal output")
+
+    parser.add_option_group(group)
+    (options, args) = parser.parse_args()
+    if options.sync and options.rsync:
+        parser.error("options -s and -r are mutally exclusive.")
+
+    if not options.debug:
+        options.debug = logging.INFO
+
+    logging.basicConfig(level=options.debug, datefmt="%Y%m%d %H:%M:%S",
+            format="%(asctime)s - %(levelname)s - %(message)s")
+
+    notmuch = Notmuch()
+
+    if options.prune:
+        notmuch.prune(dryrun=options.dryrun)
+
+    elif options.rsync:
+        notmuch.syncTags(frommaildir=True, dryrun=options.dryrun,
+                             all_mails=options.all)
+    elif options.sync:
+        notmuch.syncTags(frommaildir=False, dryrun=options.dryrun,
+                             all_mails=options.all)
+    else:
+        parser.print_help()
 
 
 #---------------------------------------------------------------------------
 # MAIN
 #---------------------------------------------------------------------------
 if __name__ == '__main__':
-    #set up the logger
-    logging.basicConfig(level=logging.INFO,
-                        format="%(asctime)s - %(levelname)s - %(message)s",
-                        datefmt="%Y%m%d %H:%M:%S")
-
-    notmuch = Notmuch()
-
-    # output help text by default
-    if len(sys.argv) == 1:
-        sys.argv.append('-h')
-
-    UsageText = """notmuchsync  Copyright (C) 2010 Sebastian Spaeth
-This program comes with ABSOLUTELY NO WARRANTY. It is released under the GNU GPL v2 (or later).
-
-Usage:
--p --prune\tPrune deleted mails (use --dryrun for no real action)
--s --sync\tSync from notmuch tags to maildir flags.\n\t\tBy default it will only look for mails from the last 30 days.\n\t\tUse --all to look at earlier mails too.
-\t\tNote that if timestamps are more than 30 days in the future, we won\'t handle it.
--r --revsync\tSync tags from maildir to notmuch. See also -s.\n\t\tDoing this via notmuch sync is slower than integrating\n\t\tthe patches into notmuch which achieve the same. See e.g.\n\t\thttp://github.com/spaetz/notmuch-all-feature/commit/cefea1f29aa6ec5789fc3b3ac4a37ba79ed9c37f\n\t\tfor one option to do that.
-
-Options:
--d\t\tReally verbose debug output.
--q\t\tLog only errors.
---all\t\tExamine all mails for -r and -s rather than only the last 30 days.
---dry-run\tDo not really modify notmuch db or mail files. Works with -p -r -s commands."""
-
-    #TODO: proper options parsing/handling
-    dryrun = '--dry-run' in sys.argv
-    all_mails = '--all' in sys.argv
-    if '-d' in sys.argv:
-        logging.getLogger().setLevel(logging.DEBUG)
-    elif '-q' in sys.argv:
-        logging.getLogger().setLevel(logging.WARN)
-
-    for arg in sys.argv[1:]:
-        if arg in ['-h','--help']:
-            print (UsageText)
-        elif arg in ['-p','--prune']:
-            #prune all mails with a "delete" tag
-            notmuch.prune(dryrun=dryrun)
-        elif arg in ['-r','--revsync']:
-            #synchronize tags in maildir
-            notmuch.syncTags(frommaildir=True, dryrun=dryrun,
-                             all_mails=all_mails)
-        elif arg in ['-s','--sync']:
-            #synchronize Unread tags in notmuch
-            notmuch.syncTags(frommaildir=False, dryrun=dryrun,
-                             all_mails=all_mails)
+    main()
