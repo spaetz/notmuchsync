@@ -314,9 +314,9 @@ See e.g. http://github.com/spaetz/notmuch-all-feature/commit/cefea1f29aa6ec5789f
 for one option to do that.""", dest="rsync")
 
     parser.add_option("-p", "--prune", action="store_true", default=False,
-        help="prune deleted mails (use --dryrun for no real action",
+        help="prune deleted mails (use --dry-run for no real action",
         dest="prune")
-    parser.add_option("--dryrun", action="store_true", default=False,
+    parser.add_option("--dry-run", action="store_true", default=False,
         help="""do not really modify notmuch db or mail files.
         Works with -p -r -s commands.""", dest="dryrun")
 
