@@ -322,10 +322,8 @@ for one option to do that.""", dest="rsync")
 
     parser.add_option("-d", "--debug", action="store_const",
         const=logging.DEBUG, help="really verbose debug output", dest="debug")
-    parser.add_option("-v", "--log-errors", action="store_const",
-        const=logging.WARN, help="log only errors", dest="debug")
     parser.add_option("-q", "--quiet", action="store_const", dest="debug",
-        const=logging.INFO, help="just a normal output")
+        const=logging.WARN, help="log only errors")
 
     parser.add_option_group(group)
     (options, args) = parser.parse_args()
