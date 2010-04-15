@@ -154,7 +154,7 @@ class Notmuch(object):
         #open the database as read-only
         self.db_ro = Database()
 
-    def prune(self, crit="tag:delete or tag:maildir::trashed", dryrun=False):
+    def prune(self, crit="tag:delete or tag:deleted or tag:maildir::trashed", dryrun=False):
         """ Physically delete all mail files matching 'tag'.
         Returns the number of matched mails.
         If dryrun == True, it will not actually delete them.
@@ -232,7 +232,7 @@ class Notmuch(object):
             logging.error("Could not sync messages due to notmuch error.")
             return None
 
-        tag_trans={'delete': 'T', 'draft': 'D', 'flagged': 'F'}
+        tag_trans={'deleted': 'T', 'draft': 'D', 'flagged': 'F'}
         # a bit clumsy ?!
         tag_trans_inverse = dict((tag_trans[x], x) for x in tag_trans)
         # check all messages for inconsistencies
