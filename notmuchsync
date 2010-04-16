@@ -16,6 +16,7 @@
 """
 import sys
 import os
+import shutil
 
 import optparse
 import logging
@@ -128,6 +129,28 @@ class SyncMessage(Message):
                 self.thaw()
                 #TODO: catch error:
                 #logging.error("Notmuch failed: %s" % (stderr))
+
+    def move_file(self, targetdir, dryrun=False):
+        """ Move the message file to targetdir (which must be absolute)
+
+        It outputs logging messages.
+        :returns: True on success, false on any error
+                  (does not raise exceptions)
+        """
+        if dryrun:
+            # return True if the src file exists
+            logging.debug("Move message %s" % (self.filename))
+            return os.path.isfile(self.filename)
+        else:
+            basedir, name = os.path.split(self.filename)
+            try:
+                shutil.move(self.filename, os.path.join(targetdir, name))
+                logging.debug("Moved message %s %s" % (basedir, targetdir))
+                return True
+            except:
+                logging.debug("Could not move file %s" % self.filename)
+                return False
+
 
 #---------------------------------------------------------------------------
 class Notmuch(object):
@@ -286,6 +309,47 @@ class Notmuch(object):
         logging.info("Synced %d messages. %d modified." %
                 (total_msgs, num_modified))
 
+
+    def move(self, query, targetdir, dryrun=False):
+        """Examines all messages matching query and moved them to 
+           "targetdir" if needed.
+        """        
+        matched_msgs, moved_msgs, failed_msgs = 0, 0, 0
+        targetdir = os.path.abspath(targetdir)
+        if not os.path.isdir(targetdir):
+            logging.error("%s does not exist." % targetdir)
+            sys.exit(1)
+
+        #fetch all messages
+        msgs = Query(self.db_ro, query).search_messages()
+        for msg in msgs:
+            #create a derived SyncMessage instance from our Message()
+            m = SyncMessage(msg)
+            matched_msgs += 1
+
+            filepath = m.filename
+            basedir, filename = os.path.split(filepath)
+            if basedir != targetdir:
+                success = m.move_file(targetdir, dryrun)
+                if success:
+                    moved_msgs += 1
+                else:
+                    failed_msgs += 1
+
+        #Finally, log our results
+        if dryrun:
+            logging.info("Would have moved %d out of %d matching messages. %d messages nonexisting."
+                         % (moved_msgs, matched_msgs, failed_msgs))
+                    
+        elif failed_msgs:
+            # failed to move all messages
+            logging.info("Moved %d out of %d matching messages. %d failed to be moved."
+                         % (moved_msgs, matched_msgs, failed_msgs))
+        else:
+            #no errors
+            logging.info("Moved %d out of %d matching messages." 
+                         % (moved_msgs, matched_msgs))
+
 def main():
     usage = """usage: %prog [options]
 Copyright (C) 2010 Sebastian Spaeth, acoolon.
@@ -312,6 +376,8 @@ we won't handle it"""
 sync is slower than integrating the patches into notmuch which achieve the same.
 See e.g. http://github.com/spaetz/notmuch-all-feature/commit/cefea1f29aa6ec5789fc3b3ac4a37ba79ed9c37f
 for one option to do that.""", dest="rsync")
+    group.add_option("-m", "--move", action="store_true", default=False,
+            help="Move messages to a folder if they match a search criteria. Usage --move '<query string>' <foldername>", dest="move")
 
     parser.add_option("-p", "--prune", action="store_true", default=False,
         help="prune deleted mails (use --dry-run for no real action",
@@ -347,6 +413,13 @@ for one option to do that.""", dest="rsync")
     elif options.sync:
         notmuch.syncTags(frommaildir=False, dryrun=options.dryrun,
                              all_mails=options.all)
+    elif options.move:
+        if len(args) != 2:
+            sys.stderr.write("Usage: %s --move 'query string' 'target folder'\n"
+                             %(sys.argv[0]))
+            return 0
+
+        notmuch.move(args[0], args[1], dryrun=options.dryrun)
     else:
         parser.print_help()
 
