@@ -219,9 +219,9 @@ class Notmuch(object):
         * "T" (deleted): the user has moved this message to the trash.
         * "D" (draft):
         * "F" (flagged): user-defined flag; toggled at user discretion.
+        * Flag "R" (replied): the user has replied to this message.
         Not handled:
         * Flag "P" (passed): the user has resent/forwarded/bounced this message.
-        * Flag "R" (replied): the user has replied to this message.
         """
         """
         #This is the version that uses the dateparser branch. Comment out
@@ -255,7 +255,7 @@ class Notmuch(object):
             logging.error("Could not sync messages due to notmuch error.")
             return None
 
-        tag_trans={'deleted': 'T', 'draft': 'D', 'flagged': 'F'}
+        tag_trans={'replied': 'R', 'deleted': 'T', 'draft': 'D', 'flagged': 'F'}
         # a bit clumsy ?!
         tag_trans_inverse = dict((tag_trans[x], x) for x in tag_trans)
         # check all messages for inconsistencies
