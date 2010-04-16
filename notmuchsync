@@ -240,7 +240,7 @@ class Notmuch(object):
             #search for all messages dating 30 days back and forth in time
             searchterm = "%d..%d" % (now - 2592000, now + 2592000)
         else:
-            searchterm = "0..%d" % now + 2592000
+            searchterm = "0..%d" % (now + 2592000)
 
         #we need a rw database if we might need to modify notmuch tags
         if frommaildir and not dryrun:
