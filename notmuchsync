@@ -68,7 +68,11 @@ class SyncMessage(Message):
        #Init this SyncMessage instance with the pointer to the notmuch_message_t
        super(SyncMessage, self).__init__(msg._msg, msg._parent)
        self.filename = self.get_filename()
-       flags = re.sub('^.*:[12],([A-Z]*)$','\\1', self.filename)
+       if re.match(r'^(.*:[12],)([A-Z]*)$', self.filename):
+           # mail name already has a ":2," info field
+           flags = re.sub('^.*:[12],([A-Z]*)$','\\1', self.filename)
+       else:
+           flags = ''
        self.maildirflags = set(flags)
        self.sync_maildirflags = None
        self.tags = set(self.get_tags())
@@ -90,8 +94,14 @@ class SyncMessage(Message):
                 self.maildirflags ^ self.sync_maildirflags):
             #sync_tags differs from tags. Need to sync up maildir tags
             newtags = "".join(sorted(self.sync_maildirflags))
-            newfile = re.sub(r'^(.*:[12],)([A-Z]*)$',"\\1" +
-                    newtags, self.filename)
+
+            if re.match(r'^(.*:[12],)([A-Z]*)$', self.filename):
+                # mail name already has a ":2," info field
+                newfile = re.sub(r'^(.*:[12],)([A-Z]*)$',"\\1" +
+                                 newtags, self.filename)
+            else:
+                # create ":2," info field
+                newfile = "%s:2,%s" % (self.filename,newtags)
             logging.debug("Maildir flags for %s (%s -> '%s')" %
                           (self.get_message_id(),
                            sorted(self.maildirflags), newtags))
