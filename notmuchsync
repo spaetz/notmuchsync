@@ -24,16 +24,19 @@ import time
 import re
 
 try:
-    from cnotmuch.notmuch import Database, Query, Messages, Message
-except OSError, e:
-    sys.stderr.write("""Could not import the notmuch shared library.
-You need to make sure it is installed correctly.\n%s\n"""  % e.args)
-    sys.exit(1)
+    from notmuch import Database, Query, Messages, Message
 except ImportError, e:
-    sys.stderr.write("""Could not import the cnotmuch bindings module.
-You need to make sure it is installed correctly.
-See http://pypi.packages.org/pypi/cnotmuch for information about cnotmuch.\n""")
-    sys.exit(1)
+    # either no shared notmuch library found or python 'notmuch' is not installed
+    # try to import the legacy 'cnotmuch' module instead
+    try:
+        from cnotmuch.notmuch import Database, Query, Messages, Message
+        #TODO: enable deprecation warning at some time in the future
+        #sys.stderr.write("""Imported legacy cnotmuch module.\nPlease upgrade to the notmuch module that can be found in the notmuch source repository\n""")
+    except ImportError, e:
+        #raises an ImportError if the shared lib could not be found
+        sys.stderr.write("""The python-notmuch module could not be loaded successfully.
+You need to make sure it is installed correctly. Reason:\n%s\n"""  % e.args)
+        sys.exit(1)
 
 #---------------------------------------------------------------------------
 class SyncMessage(Message):
