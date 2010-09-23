@@ -49,6 +49,8 @@ Options:
   -p, --prune       prune deleted mails (use --dryrun for no real action
   --dry-run         do not really modify notmuch db or mail files.
                     Works with -p -r -s commands
+  --sync-deleted    Also sync "deleted"/trashed tag/flag (disabled by default)
+                    Works with -r -s commands.
   -d, --debug       really verbose debug output
   -v, --log-errors  log only errors
   -q, --quiet       just a normal output
@@ -61,13 +63,14 @@ we won't handle it.
     -a, --all       examine all mails for -r and -s rather than only the
                     last 30 days.
     -s, --sync      sync from notmuch tags to maildir flags.
+                    "deleted" tag syncing disabled by default.
     -r, --revsync   sync tags from maildir to notmuch. Doing this via notmuch
                     sync is slower than integrating the patches into notmuch
                     which achieve the same. See e.g. http://github.com/spaetz
                     /notmuch-all-
                     feature/commit/cefea1f29aa6ec5789fc3b3ac4a37ba79ed9c37f
                     for one option to do that.
-
+                    "deleted" tag syncing disabled by default.
 
 Maildir flags
 -------------
@@ -76,10 +79,12 @@ Flags must be stored in ASCII order.
  
 This one is handled by notmuchsync:
  * "S" (seen): the user has viewed this message.
- * "T" (delete): the user has moved this message to the trash
+ * "T" (delete): the user has moved this message to the trash (disabled by 
+                 default, see --sync-deleted)
  * "D" (draft): the user considers this message a draft
  * "F" (flagged): user-defined flag; toggled at user discretion. 
+ * "R" (replied): the user has replied to this message.
 
 I don't know how to support these:
  * Flag "P" (passed): the user has resent/forwarded/bounced this msg.
- * Flag "R" (replied): the user has replied to this message.
+
