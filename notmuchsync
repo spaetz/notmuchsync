@@ -221,7 +221,8 @@ class Notmuch(object):
         self.logger.info("Deleted %d of %d messages." % (deleted, to_delete))
         return to_delete
 
-    def syncTags(self, frommaildir=False, dryrun=False, all_mails=None):
+    def syncTags(self, frommaildir=False, dryrun=False, syncdeleted=False,
+                 all_mails=None):
         """ sync the unread Tags. It does not really go through all mail files,
         but compares the stored file name with the notmuch tags.
         It will take the maildir tags as authoritative if 'frommaildir' or
@@ -235,18 +236,6 @@ class Notmuch(object):
         * Flag "R" (replied): the user has replied to this message.
         Not handled:
         * Flag "P" (passed): the user has resent/forwarded/bounced this message.
-        """
-        """
-        #This is the version that uses the dateparser branch. Comment out
-        #until it will work.
-        if not all_mails:
-            #search for messages from beginning of last month until 2036
-            # (we have a  year 2036 problem)
-            searchterm = "date:lastmonth..2036"
-        else:
-            #search for all messages between year 0 and 2036
-            # (we have a  year 2036 problem)
-            searchterm = "date:1970..2036"
         """
         now = int(time.time())
         if not all_mails:
@@ -268,9 +257,17 @@ class Notmuch(object):
             logging.error("Could not sync messages due to notmuch error.")
             return None
 
-        tag_trans={'replied': 'R', 'deleted': 'T', 'draft': 'D', 'flagged': 'F'}
-        # a bit clumsy ?!
+        # map between flags and tags
+        # depending on whether we want to include "deleted"
+        if syncdeleted:
+            tag_trans={'replied': 'R', 'deleted': 'T', 'draft': 'D', 
+                       'flagged': 'F'}
+        else:
+            tag_trans={'replied': 'R', 'draft': 'D', 'flagged': 'F'}
+
+        # reverse map.
         tag_trans_inverse = dict((tag_trans[x], x) for x in tag_trans)
+
         # check all messages for inconsistencies
         num_modified = 0
         total_msgs   = 0
@@ -383,12 +380,11 @@ we won't handle it"""
         help="""examine all mails for -r and -s rather than only the
         last 30 days.""", dest="all")
     group.add_option("-s", "--sync", action="store_true", default=False,
-            help="sync from notmuch tags to maildir flags.", dest="sync")
+            help="sync from notmuch tags to maildir flags. Do note that this does not enable the 'deleted' tag by default.", dest="sync")
     group.add_option("-r", "--revsync", action="store_true", default=False,
-            help="""sync tags from maildir to notmuch. Doing this via notmuch
-sync is slower than integrating the patches into notmuch which achieve the same.
+            help="""sync tags from maildir to notmuch. Doing this via notmuchsync is slower than integrating the patches into notmuch which achieve the same.
 See e.g. http://github.com/spaetz/notmuch-all-feature/commit/cefea1f29aa6ec5789fc3b3ac4a37ba79ed9c37f
-for one option to do that.""", dest="rsync")
+for one option to do that. Do note that this does not enable the 'deleted' tag by default.""", dest="rsync")
     group.add_option("-m", "--move", action="store_true", default=False,
             help="Move messages to a folder if they match a search criteria. Usage --move '<query string>' <foldername>", dest="move")
 
@@ -398,6 +394,9 @@ for one option to do that.""", dest="rsync")
     parser.add_option("--dry-run", action="store_true", default=False,
         help="""do not really modify notmuch db or mail files.
         Works with -p -r -s commands.""", dest="dryrun")
+    parser.add_option("--sync-deleted-tag", action="store_true", default=False,
+        help="""Also sync the deleted tag (disabled by default).
+        Works with -s -r command.""", dest="syncdeleted")
 
     parser.add_option("-d", "--debug", action="store_const",
         const=logging.DEBUG, help="really verbose debug output", dest="debug")
@@ -422,10 +421,12 @@ for one option to do that.""", dest="rsync")
 
     elif options.rsync:
         notmuch.syncTags(frommaildir=True, dryrun=options.dryrun,
-                             all_mails=options.all)
+                         syncdeleted=options.syncdeleted,
+                         all_mails=options.all)
     elif options.sync:
         notmuch.syncTags(frommaildir=False, dryrun=options.dryrun,
-                             all_mails=options.all)
+                         syncdeleted=options.syncdeleted,
+                         all_mails=options.all)
     elif options.move:
         if len(args) != 2:
             sys.stderr.write("Usage: %s --move 'query string' 'target folder'\n"
